@@ -24,26 +24,32 @@ func NewRunner(backend Backend, store *Store, lock Lock) *Runner {
 
 func (r *Runner) RunOnce(ctx context.Context, apply bool) (result Result) {
 	result.Decisions = []Decision{}
-	if r == nil || r.Backend == nil || r.Store == nil || r.Lock == nil {
+	if r == nil || r.Backend == nil || (apply && (r.Store == nil || r.Lock == nil)) {
 		return fatalResult(result, FatalDependencyMissing, false)
 	}
 
-	lease, err := r.Lock.Acquire(ctx)
-	if err != nil {
-		return fatalResult(result, lockFailureReason(err), errors.Is(err, ErrLockHeld))
-	}
-	defer func() {
-		if err := lease.Release(); err != nil {
-			result.OK = false
-			result.PartialFailure = false
-			result.Fatal = true
-			result.FatalError = FatalLockReleaseFailed
+	if apply {
+		lease, err := r.Lock.Acquire(ctx)
+		if err != nil {
+			return fatalResult(result, lockFailureReason(err), errors.Is(err, ErrLockHeld))
 		}
-	}()
+		defer func() {
+			if err := lease.Release(); err != nil {
+				result.OK = false
+				result.PartialFailure = false
+				result.Fatal = true
+				result.FatalError = FatalLockReleaseFailed
+			}
+		}()
+	}
 
-	records, err := r.Store.Records()
-	if err != nil {
-		return fatalResult(result, FatalStateLoadFailed, false)
+	records := []Record{}
+	if apply {
+		var loadErr error
+		records, loadErr = r.Store.Records()
+		if loadErr != nil {
+			return fatalResult(result, FatalStateLoadFailed, false)
+		}
 	}
 	owned := recordsByIdentity(records)
 	accounts, err := r.Backend.List(ctx)
@@ -107,6 +113,10 @@ func (r *Runner) RunOnce(ctx context.Context, apply bool) (result Result) {
 		}
 
 		if account.Disabled {
+			if !apply {
+				result.Decisions = append(result.Decisions, decisionFor(account, DecisionNone, OutcomeSkipped, ReasonAlreadyDisabled))
+				continue
+			}
 			result.Decisions = append(result.Decisions, r.handleDisabled(ctx, account, record, hasRecord, owned, now, apply))
 			continue
 		}

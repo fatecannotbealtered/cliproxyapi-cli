@@ -80,6 +80,53 @@ func TestPrinterProjectsTopLevelFields(t *testing.T) {
 	}
 }
 
+func TestPrinterProjectionPreservesRelevantUntrustedPaths(t *testing.T) {
+	var out bytes.Buffer
+	printer := NewPrinter(&out, Options{Format: FormatJSON, Compact: true, Fields: []string{"items", "summary"}})
+	if err := printer.Success(map[string]any{
+		"items":       []map[string]any{{"name": "external"}},
+		"summary":     map[string]any{"total": 1},
+		"next_offset": 1,
+		"_untrusted":  []string{"items.name", "next_offset"},
+	}); err != nil {
+		t.Fatalf("Success() error = %v", err)
+	}
+	var got struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	fields, ok := got.Data["_untrusted"].([]any)
+	if !ok || len(fields) != 1 || fields[0] != "items.name" {
+		t.Fatalf("projected _untrusted = %#v, want [items.name]", got.Data["_untrusted"])
+	}
+	if _, exists := got.Data["next_offset"]; exists {
+		t.Fatalf("next_offset should be omitted: %#v", got.Data)
+	}
+}
+
+func TestPrinterProjectionOmitsUntrustedMarkerForTrustedFields(t *testing.T) {
+	var out bytes.Buffer
+	printer := NewPrinter(&out, Options{Format: FormatJSON, Compact: true, Fields: []string{"count"}})
+	if err := printer.Success(map[string]any{
+		"count":      1,
+		"items":      []map[string]any{{"name": "external"}},
+		"_untrusted": []string{"items.name"},
+	}); err != nil {
+		t.Fatalf("Success() error = %v", err)
+	}
+	var got struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := got.Data["_untrusted"]; exists {
+		t.Fatalf("_untrusted should be omitted for trusted-only projection: %#v", got.Data)
+	}
+}
+
 func TestPrinterRejectsRawSuccess(t *testing.T) {
 	printer := NewPrinter(&bytes.Buffer{}, Options{Format: FormatRaw})
 	if err := printer.Success(map[string]any{"value": "not raw"}); err == nil {

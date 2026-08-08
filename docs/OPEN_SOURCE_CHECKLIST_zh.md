@@ -2,59 +2,64 @@
 
 [English](OPEN_SOURCE_CHECKLIST.md) | [中文](OPEN_SOURCE_CHECKLIST_zh.md)
 
-在 `cliproxyapi-cli` **首次公开推送之前**逐项走查。这是一道安全与质量关卡，不是文档 —— 仓库公开前每一项都必须勾选（或明确写明理由后豁免）。一旦公开，历史中泄露的密钥就无法收回。
+审查记录：**2026-08-07**，`1.0.0` 候选发布，工作树基于 `8bd17e6` 且尚未提交，规范固定为 `ai-native-cli-spec` `v1.5.0`。`[x]` 表示已在本地验证或明确不适用；`[ ]` 表示尚不存在的发布时证据，必须在作出对应声明前关闭。
+
+本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试，以及 Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描。远端 CI、tag、Release 产物、npm 发布和绑定发布 commit 的真实 Codex 运行，不会仅凭本地配置推断为已完成。
 
 ## 密钥
 
-- [ ] 工作区任何位置都没有凭据、token、API key 或密码。
-- [ ] **git 历史**中没有密钥 —— 已用扫描工具检查（如 `gitleaks detect`、`git log -p | grep`）；若发现，需重写历史或重建仓库，而不是只从 `HEAD` 删除。
-- [ ] 代码、配置、注释中没有内部主机名、内网 IP、内部 URL 或公司内部标识符。
-- [ ] 测试夹具和录制的响应只含合成 / 脱敏数据 —— 没有真实账户数据，没有真实 token。
-- [ ] `.env`、`*.local`、凭据文件以及 `~/.cliproxyapi-cli/` 产物已列入 `.gitignore` 并确认未被跟踪（`git status --ignored`）。
-- [ ] 凭据静态加密存储（操作系统钥匙串或加密信封，`0600`），绝不以明文写入配置文件。
+- [x] 已用 `gitleaks dir --redact` 扫描工作树；未发现凭据、token、API key 或密码。
+- [x] 已用 `gitleaks git --redact` 扫描完整 Git 历史；未发现泄露。
+- [x] 不含内部主机名、内网 IP、内部 URL 或公司内部标识符。
+- [x] 测试夹具和录制响应只使用合成或脱敏数据。
+- [x] `.env`、`*.local`、凭据状态和构建产物均被忽略且未跟踪；本地被忽略的 `cliproxyapi-cli.exe` 不在 Git 中。
+- [x] 保存的凭据使用操作系统 keyring；profile 不含 secret，也没有明文回退。
 
 ## 文档
 
-- [ ] `README.md` 遵循 REPO-SPEC §2 骨架（标题/徽章 → Agent 安装 → 它做什么 → 能力 → Agent 工作流 → 机器契约 → 配置 → 项目结构 → 开发 → 链接）。
-- [ ] `README.md` 与 `README_zh.md` **内容同步** —— 章节一致、命令一致、占位符解析为相同的真实值。
-- [ ] `CHANGELOG.md` 存在，使用 Keep a Changelog 格式，顶部有 `## [Unreleased]` 小节。
-- [ ] `LICENSE` 存在，许可证经过有意选择（默认 MIT），`2026` / `Sean Guo` 已填写。
-- [ ] 安装块可直接复制运行，使用真实已发布的 `@fateforge/cliproxyapi-cli` / `fatecannotbealtered/cliproxyapi-cli`。
+- [x] `README.md` 遵循 REPO-SPEC §2 骨架。
+- [x] `README.md` 与 `README_zh.md` 的章节、命令和发布状态表述同步。
+- [x] `CHANGELOG.md` 使用 Keep a Changelog，且顶部为 `## [Unreleased]`。
+- [x] `LICENSE` 为 MIT，已填写 `2026` / `Sean Guo`。
+- [ ] 规范安装命令 `@fateforge/cliproxyapi-cli@1.0.0` 能从 npm 解析。**待完成：** npm 尚未发布。已审查的 checkout 可用 `go install ./cmd/cliproxyapi-cli` 本地构建；不会把浮动 `@main` 当作发布证据。
 
 ## 治理
 
-- [ ] `SECURITY.md` 存在，含可用的披露渠道（`guosong6886@gmail.com`）和受支持版本表。
-- [ ] `CONTRIBUTING.md` 存在（环境搭建、分支/提交、测试、PR 流程）。
-- [ ] 若项目接受外部贡献，`CODE_OF_CONDUCT.md` 存在（Contributor Covenant）。
-- [ ] 若 `cliproxyapi-cli` 包装第三方产品（CLIProxyAPI），`NOTICE.md` 载明商标 / 非隶属声明，且 `docs/COMPATIBILITY.md` 列出已验证的后端版本矩阵。
+- [x] `SECURITY.md` 提供可用的私有 advisory/邮箱渠道和支持版本策略。
+- [x] `CONTRIBUTING.md` 覆盖环境、分支/提交、测试和 PR 流程。
+- [x] `CODE_OF_CONDUCT.md` 包含 Contributor Covenant。
+- [x] `NOTICE.md` 载明 CLIProxyAPI 非隶属声明，`docs/COMPATIBILITY.md` 记录已验证后端范围。
 
 ## 构建 / CI
 
-- [ ] 待推送的提交上 CI（`.github/workflows/ci.yml`）为**绿色**。
-- [ ] CI **强制**执行 lint 和测试 —— lint 失败或测试失败会阻断合并（不仅仅是提示性的）。
-- [ ] 功能契约覆盖率为 100%：README、Skill、`reference`、`--help`、`context`、`doctor`、`changelog` 或 `update` 中记录的每个公开行为，都有自动化命令级测试。
-- [ ] `reference.release_readiness.level` 准确：`stable` 具备 FCC 100%、mock upstream / contract tests 和真实环境 smoke/E2E 记录；缺真实证据为 `beta`；缺命令级覆盖为 `unpublishable`。
-- [ ] `doctor` 包含 `release_readiness` 检查，且状态与声明的发布等级一致。
-- [ ] 格式化工具配置已提交（按语言：ruff / golangci-lint / prettier），且 CI 运行格式校验。
-- [ ] 没有提交构建产物、缓存、虚拟环境或 IDE 配置（已由 `.gitignore` 覆盖）。
+- [ ] 候选 commit 的 GitHub Actions CI 为绿色。**待完成：** 当前审查工作树尚未提交或推送。
+- [x] CI 将格式、vet、lint、测试、race、npm audit、版本同步和规范漂移作为阻断检查。
+- [x] 功能契约覆盖所有公开命令，以及文档中的 help/version、成功、校验、配置/鉴权、上游失败、超时、空结果、分页、fan-out、envelope 和 `_untrusted` 行为。
+- [x] `reference.release_readiness.level` 如实为 `beta`：FCC 与 mock contract 已验证，绑定发布 commit 的真实证据仍缺失。
+- [x] `doctor` 报告匹配的 `release_readiness` warning。
+- [x] `.golangci.yml` 已提交，CI 强制 `gofmt` 与 lint。
+- [x] 没有跟踪构建产物、缓存、IDE 文件或 coverage 输出。
+- [ ] 已为最终 commit 记录一次性真实 Codex E2E。**待完成；只有声明 `stable` 前才必须完成。**
 
 ## 分发
 
-- [ ] `package.json` 的 `version` 与待发布的 git tag 一致（`vX.Y.Z` ↔ `X.Y.Z`）；`release.yml` 对此做守卫，不一致即失败。
-- [ ] 二进制本身（`bin/`、`*.exe`、`dist/`）**不提交** —— 由 CI 产出并被 gitignore。
-- [ ] GitHub Release 发布产物附带 `checksums.txt`；standalone 二进制安装/更新路径校验 checksum，且在不匹配或缺少条目时**失败关闭**。
-- [ ] release pipeline 使用 Sigstore/Cosign keyless 签署 `checksums.txt`，发布 bundle，standalone 安装/更新路径把签名验证状态与 checksum 校验分开报告。
-- [ ] npm 分发从 CI 构建产物发布主 wrapper 包和每个受支持 OS/CPU 的平台包，并使用 `npm publish --provenance`。
-- [ ] 版本号有唯一真相来源；运行时 `changelog` 命令和 GitHub Release 正文均派生自 `CHANGELOG.md`，而非手工复制。
+- [x] `release.yml` 会拒绝与 `package.json` 版本不一致的 tag，本地版本守卫对 `1.0.0` 通过。
+- [ ] 实际 `v1.0.0` tag 已存在并指向发布 commit。**待完成：** 当前无 tag。
+- [x] 二进制由 CI 生成并被 gitignore，不会提交。
+- [x] GoReleaser 已配置生成 `checksums.txt` 和 keyless Sigstore bundle；项目不宣传 standalone installer 或 self-update，因此进程内 updater 校验为 **N/A**。
+- [ ] GitHub Release 包含预期压缩包、`checksums.txt` 和 Sigstore bundle。**待完成：** 当前无 Release。
+- [x] release workflow 已配置通过 `npm publish --provenance` 发布 wrapper 和全部平台包。
+- [ ] npm 上存在 `1.0.0` wrapper 与全部平台包，并带 provenance。**待完成：** 发布尚未执行。
+- [x] `package.json` 是版本真相源；运行时版本和测试从其派生，运行时/release changelog 内容从 `CHANGELOG.md` 派生。
 
 ## AI 原生
 
-- [ ] 根目录 `AGENTS.md` 存在并指向 `.agent/AGENT.md`。
-- [ ] `.agent/{AGENT,CLI-SPEC,SKILL-SPEC,SEC-SPEC}.md` 规格文件齐全；共享仓库骨架标准引用 `ai-native-cli-spec/REPO-SPEC.md`。
-- [ ] `skills/cliproxyapi-cli/SKILL.md` 存在；frontmatter 包含 `version`、`license: MIT`、`user-invocable: true`，且 `metadata.requires.min_version` 匹配 CLI 版本。
-- [ ] `SKILL.md` 包含 `When to use`、`Do not use`、`First Step`、Agent 默认规则、JSON contract、写操作配方或明确只读边界、`STOP CHECKPOINT`、错误决策树、安全边界、自更新和评估场景。
-- [ ] `skills/cliproxyapi-cli/test-prompts.json` 存在、JSON 合法，并覆盖 fresh-agent read、写操作安全或只读边界、权限边界、`_untrusted` 处理和自更新。
-- [ ] 裸 `update`（单命令、无 confirm token）同步整个 `skills/cliproxyapi-cli/` 目录，或返回等价于 `npx skills add fatecannotbealtered/cliproxyapi-cli -y -g` 的 `skill_sync_command`；失败/中断报告 `stage` + `current_version` + `binary_replaced` + `skill_sync_status`。
-- [ ] `cliproxyapi-cli reference`、`cliproxyapi-cli context`、`cliproxyapi-cli doctor` 可运行并输出合法的 JSON 信封 —— 代理能从干净的检出自助上手。
-- [ ] `cliproxyapi-cli reference` 暴露 `release_readiness`，`cliproxyapi-cli doctor` 报告匹配的检查项。
-- [ ] `SECURITY.md` 中的风险等级与 `.agent/SEC-SPEC.md` 声明的等级一致（`T2`）。
+- [x] 根目录 `AGENTS.md` 指向 `.agent/AGENT.md`。
+- [x] `.agent/{AGENT,CLI-SPEC,SKILL-SPEC,SEC-SPEC}.md` 与 canonical contract 已固定版本，并通过规范漂移守卫。
+- [x] `skills/cliproxyapi-cli/SKILL.md` frontmatter 与 CLI `1.0.0`、MIT、用户调用和 `min_version` 一致。
+- [x] Skill 包含触发边界、第一步、实时 reference 指引、写操作配方、STOP checkpoint、错误树、权限边界、`_untrusted` 和评估场景。
+- [x] `test-prompts.json` 合法，并覆盖上手、写安全、权限、`_untrusted` 与升级行为。
+- [x] **N/A —— 设计上不提供 self-update。** 升级由外部完成；Skill 要求单独同步整个 Skill，再运行 `changelog`、`reference`、`context` 和 `doctor`。
+- [x] `reference`、`context`、`doctor` 均以真实命令运行并输出 canonical JSON envelope。
+- [x] `reference` 与 `doctor` 暴露相同的发布就绪状态。
+- [x] `SECURITY.md`、`.agent/SEC-SPEC.md` 和实时 `reference` 都声明风险等级 `T2`。

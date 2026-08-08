@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/api"
+	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/contract"
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/output"
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/quota"
 	"github.com/spf13/cobra"
@@ -15,16 +16,24 @@ import (
 const codexUsageURL = "https://chatgpt.com/backend-api/wham/usage"
 
 type quotaInspectionItem struct {
-	Name        string         `json:"name"`
-	AuthIndex   string         `json:"auth_index"`
-	Provider    string         `json:"provider"`
-	StatusCode  int            `json:"status_code,omitempty"`
-	State       quota.State    `json:"state"`
-	Reason      string         `json:"reason"`
-	UsedPercent *float64       `json:"used_percent,omitempty"`
-	ResetAt     *time.Time     `json:"reset_at,omitempty"`
-	Windows     []quota.Window `json:"windows"`
-	Evidence    map[string]any `json:"evidence"`
+	Target      string          `json:"target"`
+	OK          bool            `json:"ok"`
+	Error       *quotaItemError `json:"error,omitempty"`
+	Name        string          `json:"name"`
+	AuthIndex   string          `json:"auth_index"`
+	Provider    string          `json:"provider"`
+	StatusCode  int             `json:"status_code,omitempty"`
+	State       quota.State     `json:"state"`
+	Reason      string          `json:"reason"`
+	UsedPercent *float64        `json:"used_percent,omitempty"`
+	ResetAt     *time.Time      `json:"reset_at,omitempty"`
+	Windows     []quota.Window  `json:"windows"`
+	Evidence    map[string]any  `json:"evidence"`
+}
+
+type quotaItemError struct {
+	Code      string `json:"code"`
+	Retryable bool   `json:"retryable"`
 }
 
 func (a *application) quotaCommand() *cobra.Command {
@@ -38,9 +47,11 @@ func (a *application) quotaCommand() *cobra.Command {
 
 func (a *application) quotaInspectCommand() *cobra.Command {
 	var provider string
+	var limit int
+	var offset int
 	command := &cobra.Command{
 		Use:   "inspect",
-		Short: "Inspect Codex quota through the fixed ChatGPT usage endpoint",
+		Short: "Inspect Codex auth records sorted by name, provider, auth_index, and id through the fixed ChatGPT usage endpoint",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			if a.dryRun || strings.TrimSpace(a.confirm) != "" {
@@ -51,6 +62,9 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 				return output.NewError("E_VALIDATION", "quota inspect currently supports only provider codex", map[string]any{
 					"provider": provider,
 				})
+			}
+			if err := validatePagination(limit, offset); err != nil {
+				return err
 			}
 			cfg, err := a.runtimeConfig(true)
 			if err != nil {
@@ -71,9 +85,11 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 				}
 			}
 			sortAuthFiles(codexFiles)
+			page, nextOffset, hasMore := paginate(codexFiles, limit, offset)
 
-			items := make([]quotaInspectionItem, 0, len(codexFiles))
-			for _, file := range codexFiles {
+			items := make([]quotaInspectionItem, 0, len(page))
+			failed := 0
+			for _, file := range page {
 				if strings.TrimSpace(file.AuthIndex) == "" {
 					items = append(items, unknownQuotaItem(file, "auth_index is missing; quota was not probed"))
 					continue
@@ -95,10 +111,18 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 					},
 				})
 				if err != nil {
-					return err
+					cliErr := asCLIError(err)
+					if cliErr.Code == "E_AUTH" || cliErr.Code == "E_FORBIDDEN" || cliErr.Code == "E_CONFIG" {
+						return err
+					}
+					failed++
+					items = append(items, failedQuotaItem(file, cliErr.Code))
+					continue
 				}
 				assessment := quota.AssessCodex(response.StatusCode, response.Body, time.Now().UTC())
 				items = append(items, quotaInspectionItem{
+					Target:      quotaTarget(file),
+					OK:          true,
 					Name:        file.Name,
 					AuthIndex:   file.AuthIndex,
 					Provider:    "codex",
@@ -111,14 +135,21 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 					Evidence:    assessment.Evidence,
 				})
 			}
-			return a.success(map[string]any{
-				"items":      items,
-				"count":      len(items),
-				"_untrusted": []string{"items.name", "items.evidence"},
-			})
+			data := map[string]any{
+				"items": items,
+				"count": len(items),
+				"summary": map[string]int{
+					"total": len(items), "succeeded": len(items) - failed, "failed": failed,
+				},
+				"_untrusted": quotaInspectionUntrustedFields(),
+			}
+			addPaginationFields(data, offset, nextOffset, hasMore)
+			return a.success(data)
 		},
 	}
 	command.Flags().StringVar(&provider, "provider", "codex", "Quota provider (only codex is supported)")
+	command.Flags().IntVar(&limit, "limit", defaultListLimit, "Maximum Codex accounts to inspect")
+	command.Flags().IntVar(&offset, "offset", 0, "Zero-based Codex account offset")
 	return command
 }
 
@@ -142,6 +173,8 @@ func codexAccountID(file api.AuthFile) (string, bool) {
 
 func unknownQuotaItem(file api.AuthFile, reason string) quotaInspectionItem {
 	return quotaInspectionItem{
+		Target:    quotaTarget(file),
+		OK:        true,
 		Name:      file.Name,
 		AuthIndex: file.AuthIndex,
 		Provider:  "codex",
@@ -150,4 +183,28 @@ func unknownQuotaItem(file api.AuthFile, reason string) quotaInspectionItem {
 		Windows:   []quota.Window{},
 		Evidence:  map[string]any{},
 	}
+}
+
+func failedQuotaItem(file api.AuthFile, code string) quotaInspectionItem {
+	return quotaInspectionItem{
+		Target:    quotaTarget(file),
+		OK:        false,
+		Error:     &quotaItemError{Code: code, Retryable: contract.Retryable(code)},
+		Name:      file.Name,
+		AuthIndex: file.AuthIndex,
+		Provider:  "codex",
+		State:     quota.StateUnknown,
+		Reason:    "quota probe failed",
+		Windows:   []quota.Window{},
+		Evidence:  map[string]any{},
+	}
+}
+
+func quotaTarget(file api.AuthFile) string {
+	for _, value := range []string{file.AuthIndex, file.ID, file.Name} {
+		if value = strings.TrimSpace(value); value != "" {
+			return value
+		}
+	}
+	return "unknown"
 }

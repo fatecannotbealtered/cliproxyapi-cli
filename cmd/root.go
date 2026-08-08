@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	cliproxyapicli "github.com/fatecannotbealtered/cliproxyapi-cli"
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/api"
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/config"
 	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/credential"
@@ -18,7 +19,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "1.0.0"
+// version may be overridden by release builds through -ldflags -X.
+var version string
+
+func init() {
+	if version == "" {
+		version = cliproxyapicli.Version
+	}
+}
 
 type application struct {
 	in  io.Reader
@@ -82,7 +90,7 @@ func executeArgsWithCredentialStore(ctx context.Context, args []string, in io.Re
 func (a *application) rootCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "cliproxyapi-cli",
-		Short:         "Guard CLIProxyAPI account quota with conservative automation",
+		Short:         "Inspect CLIProxyAPI accounts and quota with conservative controls",
 		Version:       version,
 		SilenceErrors: true,
 		SilenceUsage:  true,

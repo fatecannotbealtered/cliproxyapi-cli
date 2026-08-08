@@ -56,6 +56,9 @@ func (a *application) rawRequestCommand() *cobra.Command {
 			if !dangerous {
 				return output.NewError("E_FORBIDDEN", "raw request requires explicit --dangerous authorization", nil)
 			}
+			if !a.dryRun && strings.TrimSpace(a.confirm) == "" {
+				return output.NewError("E_CONFIRMATION_REQUIRED", "run with --dry-run, then pass the returned token with --confirm", nil)
+			}
 
 			body, err := a.rawRequestBody(bodyText, bodyStdin)
 			if err != nil {
@@ -90,9 +93,6 @@ func (a *application) rawRequestCommand() *cobra.Command {
 					result["notices"] = notices
 				}
 				return a.success(result)
-			}
-			if strings.TrimSpace(a.confirm) == "" {
-				return output.NewError("E_CONFIRMATION_REQUIRED", "run with --dry-run, then pass the returned token with --confirm", nil)
 			}
 			if consumeErr := gate.Consume(a.confirm, cmd.CommandPath(), details, contextScope); consumeErr != nil {
 				return mapConfirmError(consumeErr)

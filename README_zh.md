@@ -1,37 +1,96 @@
 <h1 align="center">cliproxyapi-cli</h1>
 
 <p align="center">
-  <strong>轻量、JSON 优先的 CLIProxyAPI 账号检查与 Codex 配额守护工具。</strong>
-</p>
-
-<p align="center">
   <a href="README.md">English</a> &middot; <a href="README_zh.md">中文</a>
 </p>
 
-`cliproxyapi-cli` 使用 Go 和 Cobra 实现，以原生二进制加 npm 启动壳的形式分发。它可以读取 CLIProxyAPI 的 auth 元数据，通过 Management API 探测 Codex/ChatGPT 配额，并在账号明确耗尽时停用账号，或恢复此前由本工具停用且已经恢复的账号。
+<p align="center">
+  <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli"></a>
+  <img alt="npm: unpublished" src="https://img.shields.io/badge/npm-unpublished-lightgrey">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/fatecannotbealtered/cliproxyapi-cli"></a>
+</p>
 
-项目刻意保持小而专注：提供由操作系统凭据库保护的 Management key 登录，但不提供 OAuth/浏览器登录、daemon、Web UI、一级 delete 命令或自更新命令。周期执行属于外部编排场景，不属于本 CLI 的正确性契约。
+面向 Agent、JSON 优先的 CLIProxyAPI 账号检查、Codex 配额判断与严格受控账号状态变更工具。
 
-## 安装
+## Agent 安装
+
+下面是 `1.0.0` 的规范发布安装方式。包是否可用以[候选发布检查清单](docs/OPEN_SOURCE_CHECKLIST_zh.md)为准；运行预检前请替换凭据占位符：
 
 ```bash
-npm install -g @fateforge/cliproxyapi-cli
+npm install -g @fateforge/cliproxyapi-cli@1.0.0
 npx skills add fatecannotbealtered/cliproxyapi-cli -y -g
+
+export CLIPROXYAPI_CLI_BASE_URL="https://proxy.example.com/v0/management"
+export CLIPROXYAPI_CLI_MANAGEMENT_KEY="<management-key>"
+cliproxyapi-cli context --compact
+cliproxyapi-cli doctor --compact
+cliproxyapi-cli reference --compact
 ```
 
-从源码构建：
+## 它做什么
+
+`cliproxyapi-cli` 读取 CLIProxyAPI auth 元数据，通过 Management API 探测白名单内的 Codex/ChatGPT usage endpoint，并生成保守的配额判断。它只能通过 T2 dangerous 闸门加 dry-run/confirm 改变一个明确选中的账号；`guard run-once` 本身只观察。项目是独立的 CLIProxyAPI 集成，第三方说明见 [NOTICE_zh.md](NOTICE_zh.md)，已验证范围见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
+
+范围刻意保持精简：不提供 OAuth/浏览器登录、daemon、Web UI、一级 delete 命令、明文凭据回退或自更新命令。周期执行由外部编排器组合 CLI 原子命令，不能绕过各自的安全闸门。
+
+## 能力
+
+| 领域 | 用途 |
+|------|------|
+| `login`、`logout` | 验证并将一个 Management 会话保存到操作系统凭据库，或将其清除。 |
+| `auth-file list` | 使用稳定分页列出并在本地过滤 auth 记录。 |
+| `auth-file set-status` | 通过 dangerous + dry-run/confirm 启用或停用恰好一条记录。 |
+| `quota inspect` | 分页检查 Codex 账号；单账号失败不会隐藏其他结果。 |
+| `guard run-once` | 评估保守的配额耗尽建议，不改变账号状态。 |
+| `raw request` | 经 dangerous + dry-run/confirm 调用一个相对 Management 路径；响应正文省略。 |
+| `reference`、`context`、`doctor`、`changelog` | 描述实时契约、运行环境、就绪度和版本变化。 |
+
+### Guard 判断策略
+
+只有明确的结构化证据才会得到 confirmed exhaustion，包括 `rate_limit.allowed=false`、`limit_reached=true`、primary 或 secondary 窗口 `used_percent >= 100`、支持的账号级 `rate_limit_reached_type`、`spend_control.reached`，或精确支持的结构化 error code/type。
+
+普通 HTTP 429、超时/网络失败、畸形或未知 schema、自由文本、本地 token 计数、单独的 `credits.has_credits=false`，以及功能级 `additional_rate_limits` 都不能授权账号写入。`usage-queue` 会 pop 本地遥测，`reset-quota` 只清 CLIProxyAPI 本地 cooldown；二者都不能证明上游配额。
+
+## Agent 工作流
+
+1. 安装二进制和 Skill，然后运行 `context`、`doctor`、`reference`。
+2. 以实时 `reference` 作为命令、参数、schema、权限层和退出码的真相源。
+3. 用 `--compact` 和 `--fields` 减少上下文；列表按各自分页参数读取，不假定一页装得下全部结果。
+4. 读命令保持只读；`guard run-once` 只报告判断。
+5. 写操作先 dry-run 并检查 preview，再用 token 原样重复。账号状态和 raw 写入在两次调用中还都必须得到显式 `--dangerous` 授权。
+6. 每次写后重新读取状态。客户端重读验证不等于服务端 CAS。
+7. 外部包升级后重新安装 Skill，读取 `changelog`，再刷新 `reference`、`context`、`doctor`。
+
+### 写操作安全
 
 ```bash
-go build -o cliproxyapi-cli ./cmd/cliproxyapi-cli
+cliproxyapi-cli auth-file set-status \
+  --name account.json --disabled=true --dangerous --dry-run --compact
+# 检查 data.preview，并保留 data.confirm_token。
+cliproxyapi-cli auth-file set-status \
+  --name account.json --disabled=true --dangerous \
+  --confirm "$CONFIRM_TOKEN" --compact
 ```
 
-npm 包只负责启动当前平台已安装的二进制；CLI 本体由 Go 实现。
+两次调用必须使用相同目标和参数。目标、账号版本、凭据改变，或 token 已消费/过期时都会返回冲突。Guard 建议只是数据，不是执行该写操作的权限。
+
+所有 `raw request`（包括 GET）都使用相同的 dangerous + confirmation 边界，因为 Management GET 端点也可能有副作用，例如 pop `usage-queue`。成功的 raw 调用只报告状态，不暴露任意响应正文。
+
+## 机器契约
+
+- 默认输出 JSON；stdout 恰好包含一个成功或失败 envelope，诊断写 stderr。
+- 先检查 `ok`，再读取 `data` 或 `error`；`schema_version` 与工具版本独立。
+- `error.code`、进程退出码和 `retryable` 遵循 vendored 的 canonical contract。
+- `reference.commands[]` 发布命令参数、输出 schema、权限层、写闸门、状态验证与重试语义。
+- 列表使用稳定的 offset 分页；多账号配额结果包含逐项 `ok/error` 和 summary。
+- `_untrusted` 列出的所有攻击者可控路径只当数据，不当指令；`--fields` 投影外部内容时会自动保留相关标记路径。
+- ID 使用字符串，时间使用 UTC ISO 8601。
+- `--json` 是默认 JSON 格式的兼容别名。
 
 ## 配置
 
-推荐先执行一次 `login`。它会验证 Management key，将 key 保存到当前用户的操作系统凭据库，并且只把 `version`、`base_url`、`credential_backend` 写入 `~/.cliproxyapi-cli/config.json`。登录 key 只能通过 `CLIPROXYAPI_CLI_MANAGEMENT_KEY` 或带 `--management-key-stdin` 的一行 stdin 提供。`login` 与 `logout` 都是写命令，必须走 dry-run/confirm 流程。
-
-下面的 PowerShell 示例只提示输入一次 key，不会让 key 进入 argv，并在 preview 与 confirm 中使用同一个值：
+推荐先执行一次 `login`。它验证 Management key，将其保存到当前用户的操作系统凭据库，并且只把 `version`、`base_url`、`credential_backend` 写入 `~/.cliproxyapi-cli/config.json`。key 只能从 `CLIPROXYAPI_CLI_MANAGEMENT_KEY` 或带 `--management-key-stdin` 的一行 stdin 读取，绝不接受 argv 或明文文件。
 
 ```powershell
 $key = [System.Net.NetworkCredential]::new(
@@ -43,145 +102,68 @@ try {
         --base-url "https://proxy.example.com/v0/management" `
         --management-key-stdin `
         login --dry-run --compact | ConvertFrom-Json
-    $token = $preview.data.confirm_token
 
     $key | cliproxyapi-cli `
         --base-url "https://proxy.example.com/v0/management" `
         --management-key-stdin `
-        login --confirm $token --compact
+        login --confirm $preview.data.confirm_token --compact
 }
 finally {
     Clear-Variable key -ErrorAction SilentlyContinue
 }
 ```
 
-之后的命令会自动读取已保存的 URL 和 key，不再需要凭据参数：
+之后的命令会自动复用已保存 URL 和 key。凭据优先级是 stdin、环境变量、已保存 keyring；base URL 优先级是 flag、环境变量、已保存 profile、`http://127.0.0.1:8317/v0/management`。显式指定与 profile 不同的 URL 时，绝不会向它发送已保存 key。
 
-```powershell
-cliproxyapi-cli doctor --compact
-```
+| 设置 | 用途 |
+|------|------|
+| `CLIPROXYAPI_CLI_BASE_URL` | 完整 Management API base URL。 |
+| `CLIPROXYAPI_CLI_MANAGEMENT_KEY` | 临时的非交互 secret 覆盖。 |
+| `CLIPROXYAPI_CLI_STATE_DIR` | profile 与 confirmation 状态目录。 |
+| `CLIPROXYAPI_CLI_TIMEOUT_SECONDS` | 正整数秒请求超时。 |
 
-普通命令的凭据优先级为 stdin（`--management-key-stdin`）> `CLIPROXYAPI_CLI_MANAGEMENT_KEY` > 操作系统凭据库；base URL 优先级为 `--base-url` > `CLIPROXYAPI_CLI_BASE_URL` > 已保存 profile > 默认值。显式指定其他 URL 时，绝不会向它发送已保存的 key。工具不提供 Management-key argv 参数或明文文件回退。
+使用确认后的 `logout` 删除 profile 和匹配的 keyring 记录。无头 Linux 必须提供可用的 Secret Service 会话；keyring 失败是错误，不允许回退到明文存储。
 
-如需同时清除凭据库记录和已保存 profile：
-
-```powershell
-$preview = cliproxyapi-cli logout --dry-run --compact | ConvertFrom-Json
-$token = $preview.data.confirm_token
-cliproxyapi-cli logout --confirm $token --compact
-```
-
-默认 Management API 地址为：
+## 项目结构
 
 ```text
-http://127.0.0.1:8317/v0/management
+cliproxyapi-cli/
+├── cmd/                    # Cobra 命令与命令级测试
+├── internal/               # API、配置、确认、guard、输出、配额
+├── contract/               # vendored canonical JSON contract
+├── .agent/                 # 固定版本的 AI-native CLI 规范
+├── skills/cliproxyapi-cli/ # 内置 Skill 与 eval prompts
+├── docs/                   # 兼容性、E2E、开源检查清单
+├── scripts/                # 规范/版本/npm 分发工具
+└── .github/workflows/      # CI 与发布流水线
 ```
-
-可通过 `CLIPROXYAPI_CLI_BASE_URL` 或 `--base-url` 覆盖。`CLIPROXYAPI_CLI_STATE_DIR` 用于调整本地 profile、guard 与 confirm 状态目录；该目录包含敏感运维元数据，必须妥善保护。`CLIPROXYAPI_CLI_TIMEOUT_SECONDS` 用于调整请求超时。无头 Linux 环境必须提供可用的 Secret Service 会话；keyring 不可用时，CLI 会失败，不会回退到明文密钥文件。
-
-先让当前二进制说明自己的真实契约：
-
-```bash
-cliproxyapi-cli reference --compact
-cliproxyapi-cli context --compact
-cliproxyapi-cli doctor --compact
-```
-
-## 命令范围
-
-| 领域 | 用途 |
-|------|------|
-| `login`、`logout` | 验证 Management 会话并保存到操作系统凭据库，或将其清除。 |
-| `auth-file list` | 列出 Management API auth 记录，并可按 provider 过滤。 |
-| `auth-file set-status` | 手工启用或停用一条 auth 记录。 |
-| `quota inspect` | 通过 CLIProxyAPI 执行白名单内的 Codex 配额探测。 |
-| `guard run-once` | 对符合条件的账号执行一次判断；默认只观察，只有 `--apply` 才写入。 |
-| `guard state` | 读取用于安全恢复的本地 ownership 记录。 |
-| `raw request` | 在 dangerous 与 confirm 双重闸门后调用一个相对 Management API 路径；响应正文不会输出。 |
-| `reference`、`context`、`doctor`、`changelog` | 描述实时契约和运行上下文。 |
-
-准确的 flags、示例、输出 schema、权限层、错误码和退出码以 `cliproxyapi-cli reference --compact` 为准。
-
-## 配额守护
-
-`guard run-once` 在没有 `--apply` 时只观察。运维人员审阅策略后，同一操作系统用户下运行的调度器可以通过已保存的 keyring 会话调用 `guard run-once --apply`；环境变量 secret 仍可作为显式的临时覆盖。CLI 不常驻，也不会替你安装定时任务。
-
-只有 provider 响应包含明确的结构化耗尽证据时，guard 才会停用账号，例如：
-
-- `rate_limit.allowed` 为 `false`；
-- `limit_reached` 为 `true`；
-- primary 或 secondary 窗口的 `used_percent >= 100`；
-- 账号级 `rate_limit_reached_type` 或 `spend_control.reached` 明确报告耗尽；
-- 结构化 error code/type 精确命中支持的配额耗尽条件。
-
-下列情况不属于耗尽证据，绝不会触发自动停用：
-
-- 普通 HTTP 429；
-- 超时、网络错误或未知响应 schema；
-- 单独出现的 `credits.has_credits=false`；功能级 `additional_rate_limits` 也不能授权整账号写入；
-- 自由文本中出现相似短语；
-- 本地 token 统计或近期请求计数。
-
-恢复遵守 ownership：guard 只会重新启用由本工具记录为“本工具停用”的账号，而且必须先通过新的探测确认已经恢复。失败、超时、中断或结果不明确的停用即使后来观察到账号已 disabled，也不会取得 ownership。人工停用的账号不会被碰。guard 永远不会删除 auth 记录。
-
-两个容易误用的上游 Management API 行为：
-
-- 读取 `usage-queue` 会 pop 记录，而且它只是本地遥测，所以本工具不拿它判断配额耗尽。
-- `reset-quota` 只清 CLIProxyAPI 本地 cooldown，不会重置上游 ChatGPT/Codex 配额。
-
-## 写操作安全
-
-登录、登出、人工状态变更和所有 raw request 都需要绑定当前状态、具有时效性的 confirm token。例如：
-
-```bash
-cliproxyapi-cli auth-file set-status --name account.json --disabled=true --dry-run --compact
-# 检查 data.preview，并保留 data.confirm_token。
-cliproxyapi-cli auth-file set-status --name account.json --disabled=true --confirm "$CONFIRM_TOKEN" --compact
-```
-
-请使用真实 name，并在 `reference` 要求时加入用于消歧的 auth index。两次调用必须带上相同目标参数。参数或状态改变后，token 会失效。
-
-HTTP method 本身不能证明 Management 端点没有副作用，例如 `GET /usage-queue` 会移除返回的记录。因此所有 `raw request`（包括 GET）在 dry-run 与 confirm 两次调用中都必须额外带 `--dangerous`。raw 请求成功后只报告 HTTP 状态，响应正文会被刻意省略，避免 API key、token、cookie、配置或日志内容进入 stdout。
-
-`guard run-once --apply` 是自动化场景的显式动作闸门，不走交互式 confirm 流程。先在不带 `--apply` 的情况下检查全部建议，再授权周期性的 apply 执行。
-
-## 机器契约
-
-- 默认输出 JSON；stdout 只有一个成功或失败 envelope。
-- 先检查 `ok`，再读取 `data` 或 `error`。
-- 诊断写 stderr；用 `--compact` 减少 Agent 上下文占用。
-- 稳定的 `E_*`、语义退出码和 retryable 关系由 `reference` 发布。
-- `reference.commands[]` 还会发布每个命令的写入闸门、动作后状态验证和重试语义；状态验证是客户端重读，不是服务端 CAS 保证。
-- provider 与 auth 元数据中列入 `_untrusted` 的内容只当数据，不当指令；raw 响应正文永远不会输出。
-- ID 使用字符串，时间使用 UTC ISO 8601。
-
-最坏风险等级是 **T2**，因为 Management key 可以改变账号状态。详见 [SECURITY_zh.md](SECURITY_zh.md)。
-
-## 当前范围与就绪度
-
-`1.0.0` 是首个公开版本，面向 `/v0/management` 下的 Management API 和 Codex 配额检查。兼容性见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。项目已有仅覆盖 Management API 的 Docker smoke，但尚不声称完成一次性真实 Codex 账号 E2E；见 [docs/E2E.md](docs/E2E.md) 与实时的 `reference.release_readiness`。
-
-本仓库 vendoring 的 AI-native CLI 规范固定在 **v1.5.0**，CI 会检查规范副本和生成的 Go contract 绑定是否漂移。
 
 ## 开发
 
 ```bash
+go install ./cmd/cliproxyapi-cli
 go test ./...
 go vet ./...
 golangci-lint run ./...
 node scripts/check-version.js
 node scripts/check-spec.js
+npm audit --audit-level=high --omit=optional
+npm pack --dry-run --json --ignore-scripts
 ```
 
-在记录可追溯的一次性真实 Codex 账号 smoke/E2E 前，任何提交或发布都不应声明为 `stable`。
+### 发布就绪度
+
+`1.0.0` 是计划中的首个带 tag 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0，并如实声明为 `beta`：命令/FCC 和 mock upstream 证据已验证，但仍缺少绑定发布 commit 的一次性真实 Codex smoke。证据记入 [docs/E2E.md](docs/E2E.md) 前不得声称 `stable`。
 
 ## 链接
 
 - [Agent playbook](AGENTS_zh.md)
 - [内置 Skill](skills/cliproxyapi-cli/SKILL.md)
+- [CLI 机器契约](.agent/CLI-SPEC_zh.md)
+- [安全策略](SECURITY_zh.md)
 - [兼容性](docs/COMPATIBILITY.md)
 - [E2E 证据](docs/E2E.md)
-- [安全策略](SECURITY_zh.md)
 - [变更记录](CHANGELOG.md)
+- [贡献指南](CONTRIBUTING_zh.md)
 - [第三方声明](NOTICE_zh.md)
 - [MIT license](LICENSE)

@@ -195,7 +195,8 @@ func projectFields(data any, fields []string) (any, error) {
 	if err := json.Unmarshal(raw, &object); err != nil {
 		return nil, fmt.Errorf("--fields requires an object result: %w", err)
 	}
-	projected := make(map[string]any, len(fields))
+	projected := make(map[string]any, len(fields)+1)
+	untrustedRequested := false
 	for _, rawField := range fields {
 		field := strings.TrimSpace(rawField)
 		if field == "" {
@@ -205,7 +206,38 @@ func projectFields(data any, fields []string) (any, error) {
 		if !ok {
 			return nil, fmt.Errorf("unknown output field %q", field)
 		}
+		if field == "_untrusted" {
+			untrustedRequested = true
+			continue
+		}
 		projected[field] = value
 	}
+	untrusted := projectedUntrustedFields(object["_untrusted"], projected)
+	if len(untrusted) > 0 || untrustedRequested {
+		projected["_untrusted"] = untrusted
+	}
 	return projected, nil
+}
+
+func projectedUntrustedFields(raw any, projected map[string]any) []string {
+	var fields []string
+	switch value := raw.(type) {
+	case []string:
+		fields = value
+	case []any:
+		for _, item := range value {
+			field, ok := item.(string)
+			if ok {
+				fields = append(fields, field)
+			}
+		}
+	}
+	result := make([]string, 0, len(fields))
+	for _, field := range fields {
+		top, _, _ := strings.Cut(field, ".")
+		if _, ok := projected[top]; ok {
+			result = append(result, field)
+		}
+	}
+	return result
 }

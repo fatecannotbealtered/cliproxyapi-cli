@@ -30,7 +30,7 @@ The modeled implementation uses this small Management API surface:
 | Route | Purpose | Verification status |
 |-------|---------|---------------------|
 | `GET /auth-files` | Enumerate auth metadata | Mock/contract tests plus local Docker smoke against CLIProxyAPI `v7.2.120` (`ea37d13`) |
-| `PATCH /auth-files/status` | Enable or disable one auth record | Mock/contract tests plus dry-run, confirmed write, re-read verification, and restore against `v7.2.120` |
+| `PATCH /auth-files/status` | Enable or disable one auth record | Mock/contract tests plus dry-run, confirmed write, re-read verification, and a reverse write against `v7.2.120` |
 | `POST /api-call` | Perform the allowlisted Codex quota probe | Mock/contract tests plus Management API transport smoke against `v7.2.120`; no real Codex quota decision recorded |
 
 `raw request` can invoke another relative path below the configured Management base, but every call requires the dangerous and confirmation gates, response bodies are omitted, and the escape hatch is not a compatibility guarantee for any unmodeled endpoint.
@@ -43,7 +43,7 @@ The only live Management API version checked so far is CLIProxyAPI `v7.2.120` at
 
 The parser accepts snake_case and camelCase forms of the known `rate_limit`, primary-window, and secondary-window fields. It also recognizes current account-level `rate_limit_reached_type` values and `spend_control.reached`. It recognizes Unix-second or RFC 3339 reset timestamps and relative reset seconds.
 
-`additional_rate_limits` are model- or feature-scoped. An exhausted additional limit makes the overall assessment unknown: it cannot authorize disabling an entire account, and it cannot be mistaken for a healthy signal that restores an account. `credits.has_credits=false` alone is also not proof that the subscription's normal quota is exhausted.
+`additional_rate_limits` are model- or feature-scoped. An exhausted additional limit makes the overall assessment unknown: it cannot authorize changing an entire account, and it cannot be mistaken for a healthy whole-account signal. `credits.has_credits=false` alone is also not proof that the subscription's normal quota is exhausted.
 
 Compatibility intentionally fails closed. Only explicit structured signals can report confirmed exhaustion. HTTP 429 alone, transport errors, free-form phrases, missing fields, and unknown schemas remain unknown and do not authorize a write.
 

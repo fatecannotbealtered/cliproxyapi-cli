@@ -2,7 +2,7 @@
 
 ## Current Status
 
-A local Management API smoke run was performed on a pre-`1.0.0` development snapshot on 2026-08-06, but it is not a complete release E2E: the workspace had no Git metadata and no disposable real Codex account was used. `1.0.0` is the first public release. Unit, mock-upstream, and synthetic-auth tests are not substitutes for the remaining provider evidence. The project must not claim `stable` until a successful, traceable disposable real-Codex run is recorded here.
+A local Management API smoke run was performed on a pre-`1.0.0` development snapshot on 2026-08-06, but it is not a complete release E2E: the workspace had no Git metadata and no disposable real Codex account was used. `1.0.0` is the first tagged release. Unit, mock-upstream, and synthetic-auth tests are not substitutes for the remaining provider evidence. The project must not claim `stable` until a successful, traceable disposable real-Codex run is recorded here.
 
 ## Safe Test Scope
 
@@ -17,12 +17,11 @@ A valid run should record:
 5. `reference`, `context`, and `doctor` results;
 6. auth-file listing and a Codex quota inspection;
 7. observation-only `guard run-once` decisions;
-8. an optional apply test on a disposable confirmed-exhausted account, followed by write-back verification;
-9. proof that a manually disabled account was not restored;
-10. proof that an account disabled by this guard was restored only after a healthy probe; and
-11. stdout/stderr redaction and `_untrusted` behavior.
+8. a dangerous + dry-run/confirm disable of one disposable account, followed by re-read verification;
+9. a separate dangerous + dry-run/confirm enable of that account, followed by re-read verification; and
+10. stdout/stderr redaction and `_untrusted` behavior.
 
-For manual `auth-file set-status` or any `raw request`, obtain the exact command shape from `reference`, run `--dry-run`, inspect the preview, and confirm with the returned token. Raw requests also require `--dangerous` in both calls and never expose response bodies. Do not record the Management key, provider token, cookies, authorization headers, raw auth files, or unredacted account identifiers.
+For manual `auth-file set-status` or any `raw request`, obtain the exact command shape from `reference`, include `--dangerous` in both calls, run `--dry-run`, inspect the preview, and confirm with the returned token. Guard runs are observation-only. Raw requests never expose response bodies. Do not record the Management key, provider token, cookies, authorization headers, raw auth files, or unredacted account identifiers.
 
 ## Evidence Record
 

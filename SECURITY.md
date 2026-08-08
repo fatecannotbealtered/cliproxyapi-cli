@@ -18,13 +18,11 @@ The tool narrows that risk as follows:
 
 - the default endpoint is loopback-only: `http://127.0.0.1:8317/v0/management`;
 - saving or removing a login requires `--dry-run` followed by a matching, expiring `--confirm` token;
-- the guard is observation-only unless `--apply` is present;
-- manual `auth-file set-status` requires `--dry-run` followed by a matching, expiring `--confirm` token;
+- `guard run-once` is observation-only and has no apply mode;
+- manual `auth-file set-status` requires the explicit `--dangerous` tier plus `--dry-run` followed by a matching, expiring `--confirm` token;
 - every `raw request`, including GET, additionally requires `--dangerous` and the same dry-run/confirm loop;
-- guard recovery only touches accounts recorded as disabled by this tool;
-- failed, interrupted, or ambiguous disable attempts never acquire recovery ownership merely because the account is later observed disabled;
 - the guard and first-class account commands never delete auth records;
-- a single-instance lock prevents overlapping guard runs.
+- external automation is responsible for preventing overlapping guard runs.
 
 `raw request` is an advanced boundary, not a safety guarantee. A confirmed request may perform any operation exposed by the selected relative Management API path and allowed by the configured key; HTTP GET is not assumed to be side-effect free. Use the narrowest upstream key and inspect the preview. Successful raw response bodies are deliberately omitted from stdout because arbitrary Management endpoints can return credentials, configuration, cookies, or logs.
 
@@ -35,16 +33,16 @@ The tool narrows that risk as follows:
 - The confirmed key is stored in the current user's OS credential store. The default `~/.cliproxyapi-cli/config.json` contains exactly the non-secret `version`, `base_url`, and `credential_backend` fields.
 - Ordinary commands resolve credentials in this order: explicit stdin, environment, then the saved keyring entry. The first two are temporary overrides and are not persisted by ordinary commands.
 - A saved key is used only when the effective base URL exactly matches its saved profile. Explicitly selecting another URL never reuses it.
-- There is no Management-key argv flag or plaintext secret-file fallback. The key must not appear in argv, committed configuration, logs, stdout, stderr, confirmation details, or guard state.
+- There is no Management-key argv flag or plaintext secret-file fallback. The key must not appear in argv, committed configuration, logs, stdout, stderr, confirmation details, or local state.
 - Failure to access the OS credential store is an error, not permission to downgrade storage. Headless Linux requires an available Secret Service session.
 - CI and schedulers may use the saved keyring entry when running as the same OS user with keyring access; otherwise inject a temporary override through the platform's secret mechanism.
 - A remote base URL should use HTTPS. Do not expose the CLIProxyAPI Management API publicly merely to run this tool.
 
-The local state directory stores the zero-secret login profile, a machine-local confirmation secret, consumed-token state, ownership records, account identifiers, timestamps, and credential fingerprints, but never the Management key. `logout` removes the profile and its matching keyring entry. Treat the remaining directory as sensitive operational state. POSIX writes use restrictive directory/file modes. On Windows, protection relies on the user profile's ACL; the project does not claim POSIX modes translate to Windows ACLs.
+The local state directory stores the zero-secret login profile, a machine-local confirmation secret, consumed-token state, account identifiers, timestamps, and credential fingerprints, but never the Management key. `logout` removes the profile and its matching keyring entry. Treat the remaining directory as sensitive operational state. POSIX writes use restrictive directory/file modes. On Windows, protection relies on the user profile's ACL; the project does not claim POSIX modes translate to Windows ACLs.
 
 ## Quota Decision Boundary
 
-Automatic account changes depend only on explicit structured provider evidence. The supported exhaustion signals are deliberately narrow: a false `rate_limit.allowed`, a true `limit_reached`, a primary/secondary `used_percent` of at least 100, a supported account-level `rate_limit_reached_type`, `spend_control.reached=true`, or an exact supported structured error code/type.
+Any decision to change account status must depend only on explicit structured provider evidence. The observation-only guard recognizes a deliberately narrow set: a false `rate_limit.allowed`, a true `limit_reached`, a primary/secondary `used_percent` of at least 100, a supported account-level `rate_limit_reached_type`, `spend_control.reached=true`, or an exact supported structured error code/type.
 
 The following always produce an unknown/non-actionable assessment instead of a disable decision:
 
@@ -70,13 +68,14 @@ Auth metadata, provider evidence, and upstream error text may be attacker-contro
 
 ## Automation Boundary
 
-The binary is not a daemon and does not install schedules. cron, systemd timers, and Windows Task Scheduler are separate trust boundaries. Before enabling recurring `guard run-once --apply`:
+The binary is not a daemon and does not install schedules. cron, systemd timers, and Windows Task Scheduler are separate trust boundaries. A recurring workflow must compose the CLI's atomic commands rather than bypass their gates:
 
 1. run observation-only mode against the intended instance;
-2. inspect every suggested disable/restore decision;
+2. inspect every exhaustion, unknown, or failed decision and resolve each current target again;
 3. run under the intended OS identity and restrict keyring or injected-secret access;
-4. prevent concurrent invocations; and
-5. monitor non-zero exits and partial failures.
+4. for each policy-authorized status change, use `auth-file set-status --dangerous` with dry-run/confirm and verify the post-write state;
+5. prevent concurrent invocations; and
+6. monitor non-zero exits and per-item failures.
 
 ## Supply Chain
 
@@ -86,4 +85,4 @@ There is no self-update command. Upgrade through the package manager or replace 
 
 ## Out of Scope by Design
 
-The project does not provide a Web UI, daemon, OAuth/browser login, plaintext credential-store fallback, first-class deletion workflow, or self-update mechanism. Requests to bypass upstream authorization, confirmation tokens, ownership checks, credential isolation, or provider-evidence rules are security issues, not supported workflows.
+The project does not provide a Web UI, daemon, OAuth/browser login, plaintext credential-store fallback, first-class deletion workflow, or self-update mechanism. Requests to bypass upstream authorization, confirmation tokens, credential isolation, or provider-evidence rules are security issues, not supported workflows.
