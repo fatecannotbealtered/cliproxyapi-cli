@@ -2,9 +2,9 @@
 
 [English](OPEN_SOURCE_CHECKLIST.md) | [中文](OPEN_SOURCE_CHECKLIST_zh.md)
 
-审查记录：**2026-08-08**，`1.0.0` 候选发布位于 `codex/prepare-v1.0.0`，基于 `8bd17e6` 并已发布为 [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4)，规范固定为 `ai-native-cli-spec` `v1.5.0`。`[x]` 表示已验证或明确不适用；`[ ]` 表示尚不存在的发布时证据，必须在作出对应声明前关闭。
+审查记录：**2026-08-08**，`1.0.0` 候选发布位于 `codex/prepare-v1.0.0`，真实环境证据绑定 `f3c5c4a` 并已发布为 [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4)，规范固定为 `ai-native-cli-spec` `v1.5.0`。`[x]` 表示已验证或明确不适用；`[ ]` 表示尚不存在的发布时证据，必须在作出对应声明前关闭。
 
-本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试，以及 Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描。GitHub Actions 证据来自真实 PR 运行；tag、Release 产物、npm 发布和绑定发布 commit 的真实 Codex 运行，不会仅凭配置推断为已完成。
+本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试、Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描，以及[经脱敏的授权生产真实 Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md)。GitHub Actions 证据来自真实 PR 运行；tag、Release 产物和 npm 发布不会仅凭配置推断为已完成。
 
 ## 密钥
 
@@ -35,11 +35,11 @@
 - [x] [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4) 候选分支的 GitHub Actions CI 为绿色。
 - [x] CI 将格式、vet、lint、测试、race、npm audit、版本同步和规范漂移作为阻断检查。
 - [x] 功能契约覆盖所有公开命令，以及文档中的 help/version、成功、校验、配置/鉴权、上游失败、超时、空结果、分页、fan-out、envelope 和 `_untrusted` 行为。
-- [x] `reference.release_readiness.level` 如实为 `beta`：FCC 与 mock contract 已验证，绑定发布 commit 的真实证据仍缺失。
-- [x] `doctor` 报告匹配的 `release_readiness` warning。
+- [x] `reference.release_readiness.level` 为 `stable`：FCC、mock contract 与 `live_smoke_status=verified` 均有已记录证据支持。
+- [x] `doctor` 报告匹配的 `release_readiness` pass，且无需修复建议。
 - [x] `.golangci.yml` 已提交，CI 强制 `gofmt` 与 lint。
 - [x] 没有跟踪构建产物、缓存、IDE 文件或 coverage 输出。
-- [ ] 已为最终 commit 记录一次性真实 Codex E2E。**待完成；只有声明 `stable` 前才必须完成。**
+- [x] 已为候选提交 `f3c5c4a` 记录合格的真实 Codex E2E：CLIProxyAPI `v7.2.114` / `41fc5e1`、授权生产范围、脱敏证据见上方链接。
 
 ## 分发
 

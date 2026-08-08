@@ -118,8 +118,8 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		check := raw.(map[string]any)
 		if check["check"] == "release_readiness" {
 			found = true
-			if check["status"] != "warn" {
-				t.Fatalf("release_readiness check = %#v, want beta warning", check)
+			if check["status"] != "pass" || check["fix"] != nil {
+				t.Fatalf("release_readiness check = %#v, want stable pass", check)
 			}
 		}
 	}
@@ -127,7 +127,7 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		t.Fatalf("release_readiness check missing: %#v", checks)
 	}
 	readiness := decodeEnvelope(t, stdout)["data"].(map[string]any)["release_readiness"].(map[string]any)
-	if readiness["level"] != "beta" || readiness["fcc_status"] != "verified" || readiness["mock_upstream_status"] != "verified" || readiness["live_smoke_status"] != "missing" {
+	if readiness["level"] != "stable" || readiness["fcc_status"] != "verified" || readiness["mock_upstream_status"] != "verified" || readiness["live_smoke_status"] != "verified" {
 		t.Fatalf("release_readiness = %#v", readiness)
 	}
 }

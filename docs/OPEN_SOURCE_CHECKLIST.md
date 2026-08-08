@@ -2,9 +2,9 @@
 
 [English](OPEN_SOURCE_CHECKLIST.md) | [中文](OPEN_SOURCE_CHECKLIST_zh.md)
 
-Review record: **2026-08-08**, `1.0.0` release candidate on `codex/prepare-v1.0.0`, based on `8bd17e6` and published as [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4), pinned to `ai-native-cli-spec` `v1.5.0`. `[x]` means verified or explicitly not applicable. `[ ]` identifies release-time evidence that does not exist yet and must be closed before the corresponding claim is made.
+Review record: **2026-08-08**, `1.0.0` release candidate on `codex/prepare-v1.0.0`, with live evidence bound to `f3c5c4a` and published as [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4), pinned to `ai-native-cli-spec` `v1.5.0`. `[x]` means verified or explicitly not applicable. `[ ]` identifies release-time evidence that does not exist yet and must be closed before the corresponding claim is made.
 
-Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-builds, version/spec guards, npm audit/pack, actionlint, command-level contract tests, and Gitleaks `v8.30.1` scans of both the Git history and working tree. GitHub Actions evidence comes from the actual PR run; tags, release artifacts, npm publication, and a release-commit live Codex run are deliberately not inferred from configuration.
+Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-builds, version/spec guards, npm audit/pack, actionlint, command-level contract tests, Gitleaks `v8.30.1` scans of both the Git history and working tree, and the [sanitized authorized production real-Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md). GitHub Actions evidence comes from the actual PR run; tags, release artifacts, and npm publication are deliberately not inferred from configuration.
 
 ## Secrets
 
@@ -35,11 +35,11 @@ Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-bu
 - [x] GitHub Actions CI is green on the candidate branch in [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4).
 - [x] CI makes formatting, vet, lint, tests, race tests, npm audit, version sync, and spec drift blocking checks.
 - [x] Functional Contract Coverage covers every public command and the documented help/version, success, validation, config/auth, upstream failure, timeout, empty, pagination, fan-out, envelope, and `_untrusted` behavior.
-- [x] `reference.release_readiness.level` is honestly `beta`: FCC and mock contracts are verified, while live release-commit evidence is missing.
-- [x] `doctor` reports the matching `release_readiness` warning.
+- [x] `reference.release_readiness.level` is `stable`: FCC, mock contracts, and `live_smoke_status=verified` are backed by recorded evidence.
+- [x] `doctor` reports the matching `release_readiness` pass with no remediation.
 - [x] `.golangci.yml` is committed and CI enforces `gofmt` plus lint.
 - [x] No build artifacts, caches, IDE files, or coverage outputs are tracked.
-- [ ] A disposable real-Codex E2E run is recorded for the final commit. **Pending and required only before claiming `stable`.**
+- [x] A qualifying real-Codex E2E is recorded for candidate `f3c5c4a`: CLIProxyAPI `v7.2.114` / `41fc5e1`, authorized production scope, sanitized evidence linked above.
 
 ## Distribution
 

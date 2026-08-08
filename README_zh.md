@@ -1,21 +1,31 @@
 <h1 align="center">cliproxyapi-cli</h1>
 
 <p align="center">
+  <strong>面向 AI Agent 的 CLIProxyAPI 账号与 Codex 配额管理 CLI &middot; JSON 优先 &middot; dry-run 防护</strong>
+</p>
+
+<p align="center">
   <a href="README.md">English</a> &middot; <a href="README_zh.md">中文</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/fatecannotbealtered/cliproxyapi-cli/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
   <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli?style=for-the-badge"></a>
-  <img alt="npm: v1.0.0 (unpublished)" src="https://img.shields.io/badge/npm-v1.0.0%20(unpublished)-lightgrey?style=for-the-badge&logo=npm&logoColor=white">
+  <a href="https://www.npmjs.com/package/@fateforge/cliproxyapi-cli"><img alt="npm" src="https://img.shields.io/npm/v/%40fateforge%2Fcliproxyapi-cli?style=for-the-badge&logo=npm&logoColor=white&label=npm&color=CB3837"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED?style=for-the-badge"></a>
+</p>
+
+<p align="center">
+  <img alt="Agent native" src="https://img.shields.io/badge/agent-native-111827?style=for-the-badge">
+  <img alt="JSON first" src="https://img.shields.io/badge/output-JSON--first-0891B2?style=for-the-badge">
+  <img alt="Dry-run guarded" src="https://img.shields.io/badge/writes-dry--run%20guarded-F59E0B?style=for-the-badge">
 </p>
 
 > 面向 Agent、JSON 优先的 CLIProxyAPI 账号检查、Codex 配额判断与严格受控账号状态变更工具。
 
 ## Agent 安装
 
-这是 `1.0.0` 发布后的规范 Agent 安装块。npm 包目前尚未发布，因此在[候选发布检查清单](docs/OPEN_SOURCE_CHECKLIST_zh.md)确认 npm 发布完成前不要执行。发布后，这段命令会安装 CLI 和内置 Skill、提供最小运行上下文，并执行自描述预检。
+这是 `1.0.0` 的规范 Agent 安装块。它会安装 CLI 和内置 Skill、提供最小运行上下文，并执行自描述预检。
 
 ```bash
 # 安装 CLI（全局 npm）。
@@ -36,7 +46,7 @@ PowerShell 使用 `$env:NAME = "value"` 设置同样的环境变量。真实密�
 
 ## 它做什么
 
-`cliproxyapi-cli` 是 AI Agent 优先的 CLI。它读取 CLIProxyAPI auth 元数据，通过 Management API 探测白名单内的 Codex/ChatGPT usage endpoint，并生成保守的配额判断。它只能通过 dangerous dry-run/confirm 闸门改变一个明确选中的账号；`guard run-once` 本身只观察。
+`cliproxyapi-cli` 是上游 API 代理服务 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) 的独立管理客户端，与 CLIProxyAPI 或 RouterForMe 不存在从属或背书关系。它读取 auth 元数据，通过 Management API 探测白名单内的 Codex/ChatGPT usage endpoint，并生成保守的配额判断。它只能通过 dangerous dry-run/confirm 闸门改变一个明确选中的账号；`guard run-once` 本身只观察。
 
 最坏情况风险等级：**T2** —— 配置的 Management key 可以检查 auth 元数据并改变账号状态。参见 [SECURITY_zh.md](SECURITY_zh.md)、[.agent/SEC-SPEC_zh.md](.agent/SEC-SPEC_zh.md)、[NOTICE_zh.md](NOTICE_zh.md) 中的独立集成声明，以及 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) 中已验证的后端范围。
 
@@ -159,10 +169,11 @@ npm pack --dry-run --json --ignore-scripts
 
 发布门禁：README、Skill、`reference`、`--help`、`context`、`doctor` 或 `changelog` 中声明的每个公开行为都必须有命令级测试。功能契约覆盖率为 100%；数字代码覆盖率是辅助指标。
 
-发布就绪度：`1.0.0` 是计划中的首个带 tag 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0，并如实声明为 `beta`：命令/FCC 和 mock upstream 证据已验证，但仍缺少绑定发布 commit 的一次性真实 Codex smoke。证据记入 [docs/E2E.md](docs/E2E.md) 前不得声称 `stable`。
+发布就绪度：`1.0.0` 是首个 stable 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0；命令/FCC、mock upstream contract，以及候选提交 `f3c5c4a` 经明确授权的生产真实 Codex E2E 均已验证。脱敏证据和适用范围见 [docs/E2E.md](docs/E2E.md)。
 
 ## 链接
 
+- [CLIProxyAPI 上游仓库](https://github.com/router-for-me/CLIProxyAPI) —— 本独立 CLI 所管理的服务
 - [Agent playbook](AGENTS_zh.md)
 - [内置 Skill](skills/cliproxyapi-cli/SKILL.md)
 - [CLI 机器契约](.agent/CLI-SPEC_zh.md)

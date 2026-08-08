@@ -28,14 +28,14 @@ type releaseReadiness struct {
 
 func currentReleaseReadiness() releaseReadiness {
 	return releaseReadiness{
-		Level:                      "beta",
+		Level:                      "stable",
 		FCCRequired:                true,
 		FCCStatus:                  "verified",
 		MockUpstreamRequired:       true,
 		MockUpstreamStatus:         "verified",
 		LiveSmokeRequiredForStable: true,
-		LiveSmokeStatus:            "missing",
-		Reason:                     "Command-level and mock-upstream contract coverage is verified; a recorded disposable real-Codex E2E run is still required for stable.",
+		LiveSmokeStatus:            "verified",
+		Reason:                     "Command-level coverage, mock-upstream contracts, and a recorded authorized production real-Codex E2E are verified for 1.0.0.",
 		RequiredEvidence: []string{
 			"functional_contract_coverage_100",
 			"mock_upstream_contract_tests",
@@ -93,7 +93,7 @@ func (a *application) doctorCommand() *cobra.Command {
 				readinessCheck = doctorCheck{
 					Check:  "release_readiness",
 					Status: "warn",
-					Fix:    "record a disposable real-Codex E2E run before declaring stable",
+					Fix:    "record a qualifying real-Codex E2E run before declaring stable",
 				}
 			}
 			checks := []doctorCheck{

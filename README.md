@@ -1,21 +1,31 @@
 <h1 align="center">cliproxyapi-cli</h1>
 
 <p align="center">
+  <strong>Agent-native CLI for CLIProxyAPI account and Codex quota management &middot; JSON-first &middot; dry-run guarded</strong>
+</p>
+
+<p align="center">
   <a href="README.md">English</a> &middot; <a href="README_zh.md">中文</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/fatecannotbealtered/cliproxyapi-cli/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
   <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli?style=for-the-badge"></a>
-  <img alt="npm: v1.0.0 (unpublished)" src="https://img.shields.io/badge/npm-v1.0.0%20(unpublished)-lightgrey?style=for-the-badge&logo=npm&logoColor=white">
+  <a href="https://www.npmjs.com/package/@fateforge/cliproxyapi-cli"><img alt="npm" src="https://img.shields.io/npm/v/%40fateforge%2Fcliproxyapi-cli?style=for-the-badge&logo=npm&logoColor=white&label=npm&color=CB3837"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED?style=for-the-badge"></a>
+</p>
+
+<p align="center">
+  <img alt="Agent native" src="https://img.shields.io/badge/agent-native-111827?style=for-the-badge">
+  <img alt="JSON first" src="https://img.shields.io/badge/output-JSON--first-0891B2?style=for-the-badge">
+  <img alt="Dry-run guarded" src="https://img.shields.io/badge/writes-dry--run%20guarded-F59E0B?style=for-the-badge">
 </p>
 
 > Agent-native, JSON-first CLI for CLIProxyAPI account inspection, Codex quota evaluation, and tightly gated account-status changes.
 
 ## Agent Install
 
-This is the canonical Agent install block for release `1.0.0`. The npm package is currently unpublished, so do not run it until the [release-candidate checklist](docs/OPEN_SOURCE_CHECKLIST.md) marks npm publication complete. After publication, the block installs the CLI and bundled Skill, provides the minimum runtime context, and runs the self-description preflight.
+This is the canonical Agent install block for release `1.0.0`. It installs the CLI and bundled Skill, provides the minimum runtime context, and runs the self-description preflight.
 
 ```bash
 # Install the CLI (global npm).
@@ -36,7 +46,7 @@ PowerShell uses `$env:NAME = "value"` for the same environment variables. Keep r
 
 ## What It Does
 
-`cliproxyapi-cli` is designed for AI Agents first. It reads CLIProxyAPI auth metadata, probes the allowlisted Codex/ChatGPT usage endpoint through the Management API, and produces conservative quota decisions. It can change one explicitly selected account only through a dangerous dry-run/confirm gate; `guard run-once` itself is observation-only.
+`cliproxyapi-cli` is an independent management client for [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), the upstream API proxy service. It is not affiliated with or endorsed by CLIProxyAPI or RouterForMe. The CLI reads auth metadata, probes the allowlisted Codex/ChatGPT usage endpoint through the Management API, and produces conservative quota decisions. It can change one explicitly selected account only through a dangerous dry-run/confirm gate; `guard run-once` itself is observation-only.
 
 Worst-case risk tier: **T2** — a configured Management key can inspect auth metadata and change account status. See [SECURITY.md](SECURITY.md), [.agent/SEC-SPEC.md](.agent/SEC-SPEC.md), the independent-integration notice in [NOTICE.md](NOTICE.md), and the verified backend scope in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
@@ -159,10 +169,11 @@ npm pack --dry-run --json --ignore-scripts
 
 Release gate: every public behavior documented in README, Skill, `reference`, `--help`, `context`, `doctor`, or `changelog` must have command-level tests. Functional Contract Coverage is 100%; numeric line coverage is secondary.
 
-Release readiness: version `1.0.0` is the intended first tagged release. The repository vendors `ai-native-cli-spec` v1.5.0 and declares `beta`: command/FCC and mock-upstream evidence are verified, but a disposable real-Codex smoke tied to the release commit is still missing. Do not claim `stable` until that evidence is recorded in [docs/E2E.md](docs/E2E.md).
+Release readiness: `1.0.0` is the first stable release. The repository vendors `ai-native-cli-spec` v1.5.0; command/FCC, mock-upstream contracts, and the recorded authorized production real-Codex E2E for candidate `f3c5c4a` are verified. See [docs/E2E.md](docs/E2E.md) for the sanitized evidence and scope.
 
 ## Links
 
+- [CLIProxyAPI upstream repository](https://github.com/router-for-me/CLIProxyAPI) — the service managed by this independent CLI
 - [Agent playbook](AGENTS.md)
 - [Bundled Skill](skills/cliproxyapi-cli/SKILL.md)
 - [CLI machine contract](.agent/CLI-SPEC.md)
