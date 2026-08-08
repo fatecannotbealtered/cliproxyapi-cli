@@ -2,9 +2,9 @@
 
 [English](OPEN_SOURCE_CHECKLIST.md) | [中文](OPEN_SOURCE_CHECKLIST_zh.md)
 
-审查记录：**2026-08-08**，`1.0.0` 候选发布位于 `codex/prepare-v1.0.0`，真实环境证据绑定 `f3c5c4a` 并已发布为 [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4)，规范固定为 `ai-native-cli-spec` `v1.5.0`。`[x]` 表示已验证或明确不适用；`[ ]` 表示尚不存在的发布时证据，必须在作出对应声明前关闭。
+审查记录：**2026-08-08**，`v1.0.0` 发布提交为 `03fe02f`，通过 [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4) 合并，真实环境证据绑定 `f3c5c4a`，规范固定为 `ai-native-cli-spec` `v1.5.0`。`[x]` 表示已验证或明确不适用。
 
-本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试、Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描，以及[经脱敏的授权生产真实 Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md)。GitHub Actions 证据来自真实 PR 运行；tag、Release 产物和 npm 发布不会仅凭配置推断为已完成。
+本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试、Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描，以及[经脱敏的授权生产真实 Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md)。GitHub Actions 证据来自真实 PR、`main` 与 tag 运行；Release 产物和 npm 发布均已根据公开产物实测验证。
 
 ## 密钥
 
@@ -21,7 +21,7 @@
 - [x] `README.md` 与 `README_zh.md` 的章节、命令和发布状态表述同步。
 - [x] `CHANGELOG.md` 使用 Keep a Changelog，且顶部为 `## [Unreleased]`。
 - [x] `LICENSE` 为 MIT，已填写 `2026` / `Sean Guo`。
-- [ ] 规范安装命令 `@fateforge/cliproxyapi-cli@1.0.0` 能从 npm 解析。**待完成：** npm 尚未发布。已审查的 checkout 可用 `go install ./cmd/cliproxyapi-cli` 本地构建；不会把浮动 `@main` 当作发布证据。
+- [x] 规范安装命令 `@fateforge/cliproxyapi-cli@1.0.0` 能从 npm 解析；Windows x64 全新安装已实际运行打包二进制，并报告 `1.0.0`、`stable`、`live_smoke_status=verified`。
 
 ## 治理
 
@@ -32,7 +32,7 @@
 
 ## 构建 / CI
 
-- [x] [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4) 候选分支的 GitHub Actions CI 为绿色。
+- [x] [PR #4](https://github.com/fatecannotbealtered/cliproxyapi-cli/pull/4) 候选分支、最终 `main` 提交 `03fe02f` 与 `v1.0.0` 发布运行的 GitHub Actions CI 均为绿色。
 - [x] CI 将格式、vet、lint、测试、race、npm audit、版本同步和规范漂移作为阻断检查。
 - [x] 功能契约覆盖所有公开命令，以及文档中的 help/version、成功、校验、配置/鉴权、上游失败、超时、空结果、分页、fan-out、envelope 和 `_untrusted` 行为。
 - [x] `reference.release_readiness.level` 为 `stable`：FCC、mock contract 与 `live_smoke_status=verified` 均有已记录证据支持。
@@ -44,12 +44,12 @@
 ## 分发
 
 - [x] `release.yml` 会拒绝与 `package.json` 版本不一致的 tag，本地版本守卫对 `1.0.0` 通过。
-- [ ] 实际 `v1.0.0` tag 已存在并指向发布 commit。**待完成：** 当前无 tag。
+- [x] 注解 tag `v1.0.0` 已存在，并解析到发布提交 `03fe02f`。
 - [x] 二进制由 CI 生成并被 gitignore，不会提交。
 - [x] GoReleaser 已配置生成 `checksums.txt` 和 keyless Sigstore bundle；项目不宣传 standalone installer 或 self-update，因此进程内 updater 校验为 **N/A**。
-- [ ] GitHub Release 包含预期压缩包、`checksums.txt` 和 Sigstore bundle。**待完成：** 当前无 Release。
+- [x] [GitHub Release](https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0) 包含 5 个平台压缩包、`checksums.txt` 和 Sigstore bundle；下载后的每个压缩包均匹配 checksum，`cosign verify-blob` 对发布工作流身份返回 `Verified OK`。
 - [x] release workflow 已配置通过 `npm publish --provenance` 发布 wrapper 和全部平台包。
-- [ ] npm 上存在 `1.0.0` wrapper 与全部平台包，并带 provenance。**待完成：** 发布尚未执行。
+- [x] npm 上 wrapper 与 6 个平台包均为 `latest=1.0.0`，全部绑定 `gitHead=03fe02f`，并具有 integrity、registry signature 与 SLSA provenance。
 - [x] `package.json` 是版本真相源；运行时版本和测试从其派生，运行时/release changelog 内容从 `CHANGELOG.md` 派生。
 
 ## AI 原生
