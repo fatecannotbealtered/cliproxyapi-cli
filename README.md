@@ -5,64 +5,68 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli"></a>
-  <img alt="npm: unpublished" src="https://img.shields.io/badge/npm-unpublished-lightgrey">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/fatecannotbealtered/cliproxyapi-cli"></a>
+  <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/fatecannotbealtered/cliproxyapi-cli/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli?style=for-the-badge"></a>
+  <img alt="npm: v1.0.0 (unpublished)" src="https://img.shields.io/badge/npm-v1.0.0%20(unpublished)-lightgrey?style=for-the-badge&logo=npm&logoColor=white">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED?style=for-the-badge"></a>
 </p>
 
-An agent-native, JSON-first CLI for CLIProxyAPI account inspection, Codex quota evaluation, and tightly gated account-status changes.
+> Agent-native, JSON-first CLI for CLIProxyAPI account inspection, Codex quota evaluation, and tightly gated account-status changes.
 
 ## Agent Install
 
-This is the canonical `1.0.0` release install. Package availability is tracked in the [release-candidate checklist](docs/OPEN_SOURCE_CHECKLIST.md); replace the credential placeholders before running the preflight:
+This is the canonical Agent install block for release `1.0.0`. The npm package is currently unpublished, so do not run it until the [release-candidate checklist](docs/OPEN_SOURCE_CHECKLIST.md) marks npm publication complete. After publication, the block installs the CLI and bundled Skill, provides the minimum runtime context, and runs the self-description preflight.
 
 ```bash
+# Install the CLI (global npm).
 npm install -g @fateforge/cliproxyapi-cli@1.0.0
+# Install the Agent Skill.
 npx skills add fatecannotbealtered/cliproxyapi-cli -y -g
 
+# Provide runtime context. Replace placeholders in the local shell/secret manager.
 export CLIPROXYAPI_CLI_BASE_URL="https://proxy.example.com/v0/management"
 export CLIPROXYAPI_CLI_MANAGEMENT_KEY="<management-key>"
+# Verify the Agent contract before task commands.
 cliproxyapi-cli context --compact
 cliproxyapi-cli doctor --compact
 cliproxyapi-cli reference --compact
 ```
 
+PowerShell uses `$env:NAME = "value"` for the same environment variables. Keep real secrets in the local shell or secret manager; do not commit them.
+
 ## What It Does
 
-`cliproxyapi-cli` reads CLIProxyAPI auth metadata, probes the allowlisted Codex/ChatGPT usage endpoint through the Management API, and produces conservative quota decisions. It can change one explicitly selected account only through a T2 dangerous gate plus dry-run/confirm; `guard run-once` itself is observation-only. The project is an independent CLIProxyAPI integration—see [NOTICE.md](NOTICE.md) and the verified scope in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+`cliproxyapi-cli` is designed for AI Agents first. It reads CLIProxyAPI auth metadata, probes the allowlisted Codex/ChatGPT usage endpoint through the Management API, and produces conservative quota decisions. It can change one explicitly selected account only through a dangerous dry-run/confirm gate; `guard run-once` itself is observation-only.
+
+Worst-case risk tier: **T2** — a configured Management key can inspect auth metadata and change account status. See [SECURITY.md](SECURITY.md), [.agent/SEC-SPEC.md](.agent/SEC-SPEC.md), the independent-integration notice in [NOTICE.md](NOTICE.md), and the verified backend scope in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 The scope is intentionally narrow: no OAuth/browser login, daemon, Web UI, first-class delete command, plaintext credential fallback, or self-update command. Recurring execution belongs to an external orchestrator that composes the CLI's atomic commands without bypassing their gates.
 
 ## Capabilities
 
-| Area | Purpose |
-|------|---------|
-| `login`, `logout` | Verify and save one Management session in the OS keyring, or remove it. |
-| `auth-file list` | List and locally filter auth records with stable pagination. |
-| `auth-file set-status` | Enable or disable exactly one record through dangerous + dry-run/confirm gates. |
-| `quota inspect` | Inspect paginated Codex accounts; per-account failures do not hide other results. |
-| `guard run-once` | Evaluate conservative quota-exhaustion suggestions without changing state. |
-| `raw request` | Call one relative Management path through dangerous + dry-run/confirm gates; response bodies are omitted. |
-| `reference`, `context`, `doctor`, `changelog` | Describe the live contract, runtime, readiness, and version delta. |
+| Area | Commands | Agent use |
+|------|----------|-----------|
+| Session | `login`, `logout` | Verify and save one Management session in the OS keyring, or remove it. |
+| Accounts | `auth-file list`, `auth-file set-status` | Inspect paginated auth records or change exactly one status through dangerous dry-run/confirm gates. |
+| Quota | `quota inspect`, `guard run-once` | Inspect Codex quota with isolated per-account failures and produce observation-only exhaustion suggestions. |
+| Escape hatch | `raw request` | Call one relative Management path through dangerous dry-run/confirm gates without exposing response bodies. |
+| Self-description | `reference`, `context`, `doctor`, `changelog` | Discover the live contract, runtime, readiness, and version delta. |
 
-### Guard decision policy
-
-The guard reports confirmed exhaustion only from explicit structured evidence, including a false `rate_limit.allowed`, true `limit_reached`, a primary or secondary window at `used_percent >= 100`, supported account-level `rate_limit_reached_type`, `spend_control.reached`, or an exact supported structured error code/type.
-
-Ordinary HTTP 429, timeout/network failure, malformed or unknown schema, free-form text, local token counters, `credits.has_credits=false` alone, and feature-scoped `additional_rate_limits` never authorize an account write. `usage-queue` pops local telemetry, and `reset-quota` only clears CLIProxyAPI's local cooldown; neither proves upstream allowance.
+The README is intentionally a map, not the full manual. Agents should call `cliproxyapi-cli reference --compact` for exact flags, schemas, permissions, exit codes, error codes, and the structured guard decision policy before executing task commands.
 
 ## Agent Workflow
 
-1. Install the binary and Skill, then run `context`, `doctor`, and `reference`.
-2. Treat live `reference` as the source of truth for commands, parameters, schemas, permission tiers, and exits.
-3. Use `--compact` and `--fields` to reduce context; use each list command's pagination flags instead of assuming all items fit in one response.
-4. Keep reads read-only. `guard run-once` only reports decisions.
-5. For a write, run dry-run, inspect the preview, then repeat the unchanged operation with its token. Account-status and raw writes also require explicit `--dangerous` authorization in both calls.
-6. Re-read state after every write. Client re-read verification is not a server-side CAS guarantee.
-7. After an external package upgrade, reinstall the Skill and read `changelog`, then refresh `reference`, `context`, and `doctor`.
+1. Install the binary and Skill with the block above.
+2. Configure the endpoint and credential in the local shell or secret manager; never commit them.
+3. Run `context` and `doctor` as the preflight.
+4. Run `reference` and treat its live output as the source of truth for commands, parameters, schemas, permission tiers, and exits.
+5. Use `--compact` and `--fields` to reduce context; use each list command's pagination flags instead of assuming all items fit in one response.
+6. Keep reads read-only. `guard run-once` only reports decisions.
+7. For a write, run dry-run, inspect the preview, then repeat the unchanged operation with its token. Account-status and raw writes also require explicit `--dangerous` authorization in both calls.
+8. Re-read state after every write. Client re-read verification is not a server-side CAS guarantee.
+9. After an external package upgrade, reinstall the Skill and read `changelog`, then refresh `reference`, `context`, and `doctor`.
 
-### Write safety
+Write example:
 
 ```bash
 cliproxyapi-cli auth-file set-status \
@@ -79,7 +83,7 @@ Every `raw request`, including GET, uses the same dangerous + confirmation bound
 
 ## Machine Contract
 
-- JSON is the default. stdout contains exactly one success or error envelope; diagnostics belong on stderr.
+- JSON is the default. Its envelope contains `ok`, `schema_version`, `data` or `error`, and `meta`; stdout contains exactly one envelope and diagnostics belong on stderr.
 - Check `ok` first, then read `data` or `error`; `schema_version` is independent from the tool version.
 - `error.code`, process exit, and `retryable` follow the canonical vendored contract.
 - `reference.commands[]` publishes command parameters, output schema, permission tier, write gate, state verification, and retry semantics.
@@ -128,14 +132,16 @@ Use confirmed `logout` to remove the profile and matching keyring entry. Headles
 
 ```text
 cliproxyapi-cli/
+├── AGENTS.md               # first file an Agent reads
+├── .agent/                 # pinned AI-native CLI, Skill, and security specs
+├── .github/                # CI, release, issue, PR, and dependency automation
 ├── cmd/                    # Cobra commands and command-level tests
 ├── internal/               # API, config, confirmation, guard, output, quota
 ├── contract/               # vendored canonical JSON contract
-├── .agent/                 # pinned AI-native CLI specifications
-├── skills/cliproxyapi-cli/ # bundled Skill and eval prompts
-├── docs/                   # compatibility, E2E, open-source checklist
-├── scripts/                # spec/version/npm distribution tooling
-└── .github/workflows/      # CI and release pipelines
+├── docs/                   # compatibility, E2E, and open-source checklists
+├── skills/cliproxyapi-cli/ # bundled Agent Skill and eval prompts
+├── scripts/                # spec, version, and npm distribution tooling
+└── package.json            # npm wrapper distribution and version source
 ```
 
 ## Development
@@ -151,9 +157,9 @@ npm audit --audit-level=high --omit=optional
 npm pack --dry-run --json --ignore-scripts
 ```
 
-### Release readiness
+Release gate: every public behavior documented in README, Skill, `reference`, `--help`, `context`, `doctor`, or `changelog` must have command-level tests. Functional Contract Coverage is 100%; numeric line coverage is secondary.
 
-Version `1.0.0` is the intended first tagged release. The repository vendors `ai-native-cli-spec` v1.5.0 and declares `beta`: command/FCC and mock-upstream evidence are verified, but a disposable real-Codex smoke tied to the release commit is still missing. Do not claim `stable` until that evidence is recorded in [docs/E2E.md](docs/E2E.md).
+Release readiness: version `1.0.0` is the intended first tagged release. The repository vendors `ai-native-cli-spec` v1.5.0 and declares `beta`: command/FCC and mock-upstream evidence are verified, but a disposable real-Codex smoke tied to the release commit is still missing. Do not claim `stable` until that evidence is recorded in [docs/E2E.md](docs/E2E.md).
 
 ## Links
 

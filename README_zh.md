@@ -5,64 +5,68 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli"></a>
-  <img alt="npm: unpublished" src="https://img.shields.io/badge/npm-unpublished-lightgrey">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/fatecannotbealtered/cliproxyapi-cli"></a>
+  <a href="https://github.com/fatecannotbealtered/cliproxyapi-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/fatecannotbealtered/cliproxyapi-cli/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="https://goreportcard.com/report/github.com/fatecannotbealtered/cliproxyapi-cli"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/fatecannotbealtered/cliproxyapi-cli?style=for-the-badge"></a>
+  <img alt="npm: v1.0.0 (unpublished)" src="https://img.shields.io/badge/npm-v1.0.0%20(unpublished)-lightgrey?style=for-the-badge&logo=npm&logoColor=white">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED?style=for-the-badge"></a>
 </p>
 
-面向 Agent、JSON 优先的 CLIProxyAPI 账号检查、Codex 配额判断与严格受控账号状态变更工具。
+> 面向 Agent、JSON 优先的 CLIProxyAPI 账号检查、Codex 配额判断与严格受控账号状态变更工具。
 
 ## Agent 安装
 
-下面是 `1.0.0` 的规范发布安装方式。包是否可用以[候选发布检查清单](docs/OPEN_SOURCE_CHECKLIST_zh.md)为准；运行预检前请替换凭据占位符：
+这是 `1.0.0` 发布后的规范 Agent 安装块。npm 包目前尚未发布，因此在[候选发布检查清单](docs/OPEN_SOURCE_CHECKLIST_zh.md)确认 npm 发布完成前不要执行。发布后，这段命令会安装 CLI 和内置 Skill、提供最小运行上下文，并执行自描述预检。
 
 ```bash
+# 安装 CLI（全局 npm）。
 npm install -g @fateforge/cliproxyapi-cli@1.0.0
+# 安装 Agent Skill。
 npx skills add fatecannotbealtered/cliproxyapi-cli -y -g
 
+# 提供运行上下文。把占位符替换为本地 shell/密钥管理器里的值。
 export CLIPROXYAPI_CLI_BASE_URL="https://proxy.example.com/v0/management"
 export CLIPROXYAPI_CLI_MANAGEMENT_KEY="<management-key>"
+# 执行任务命令前验证 Agent 契约。
 cliproxyapi-cli context --compact
 cliproxyapi-cli doctor --compact
 cliproxyapi-cli reference --compact
 ```
 
+PowerShell 使用 `$env:NAME = "value"` 设置同样的环境变量。真实密钥只放在本地 shell 或密钥管理器里，不要提交到仓库。
+
 ## 它做什么
 
-`cliproxyapi-cli` 读取 CLIProxyAPI auth 元数据，通过 Management API 探测白名单内的 Codex/ChatGPT usage endpoint，并生成保守的配额判断。它只能通过 T2 dangerous 闸门加 dry-run/confirm 改变一个明确选中的账号；`guard run-once` 本身只观察。项目是独立的 CLIProxyAPI 集成，第三方说明见 [NOTICE_zh.md](NOTICE_zh.md)，已验证范围见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
+`cliproxyapi-cli` 是 AI Agent 优先的 CLI。它读取 CLIProxyAPI auth 元数据，通过 Management API 探测白名单内的 Codex/ChatGPT usage endpoint，并生成保守的配额判断。它只能通过 dangerous dry-run/confirm 闸门改变一个明确选中的账号；`guard run-once` 本身只观察。
+
+最坏情况风险等级：**T2** —— 配置的 Management key 可以检查 auth 元数据并改变账号状态。参见 [SECURITY_zh.md](SECURITY_zh.md)、[.agent/SEC-SPEC_zh.md](.agent/SEC-SPEC_zh.md)、[NOTICE_zh.md](NOTICE_zh.md) 中的独立集成声明，以及 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) 中已验证的后端范围。
 
 范围刻意保持精简：不提供 OAuth/浏览器登录、daemon、Web UI、一级 delete 命令、明文凭据回退或自更新命令。周期执行由外部编排器组合 CLI 原子命令，不能绕过各自的安全闸门。
 
 ## 能力
 
-| 领域 | 用途 |
-|------|------|
-| `login`、`logout` | 验证并将一个 Management 会话保存到操作系统凭据库，或将其清除。 |
-| `auth-file list` | 使用稳定分页列出并在本地过滤 auth 记录。 |
-| `auth-file set-status` | 通过 dangerous + dry-run/confirm 启用或停用恰好一条记录。 |
-| `quota inspect` | 分页检查 Codex 账号；单账号失败不会隐藏其他结果。 |
-| `guard run-once` | 评估保守的配额耗尽建议，不改变账号状态。 |
-| `raw request` | 经 dangerous + dry-run/confirm 调用一个相对 Management 路径；响应正文省略。 |
-| `reference`、`context`、`doctor`、`changelog` | 描述实时契约、运行环境、就绪度和版本变化。 |
+| 领域 | 命令 | Agent 用法 |
+|------|------|------------|
+| 会话 | `login`、`logout` | 验证并将一个 Management 会话保存到操作系统凭据库，或将其清除。 |
+| 账号 | `auth-file list`、`auth-file set-status` | 分页检查 auth 记录，或通过 dangerous dry-run/confirm 改变恰好一个状态。 |
+| 配额 | `quota inspect`、`guard run-once` | 隔离单账号失败地检查 Codex 配额，并生成只观察的耗尽建议。 |
+| 逃生口 | `raw request` | 经 dangerous dry-run/confirm 调用一个相对 Management 路径，且不暴露响应正文。 |
+| 自描述 | `reference`、`context`、`doctor`、`changelog` | 发现实时契约、运行环境、就绪度和版本变化。 |
 
-### Guard 判断策略
-
-只有明确的结构化证据才会得到 confirmed exhaustion，包括 `rate_limit.allowed=false`、`limit_reached=true`、primary 或 secondary 窗口 `used_percent >= 100`、支持的账号级 `rate_limit_reached_type`、`spend_control.reached`，或精确支持的结构化 error code/type。
-
-普通 HTTP 429、超时/网络失败、畸形或未知 schema、自由文本、本地 token 计数、单独的 `credits.has_credits=false`，以及功能级 `additional_rate_limits` 都不能授权账号写入。`usage-queue` 会 pop 本地遥测，`reset-quota` 只清 CLIProxyAPI 本地 cooldown；二者都不能证明上游配额。
+README 只做地图，不做完整手册。Agent 在执行任务命令前，应调用 `cliproxyapi-cli reference --compact` 获取准确的 flags、schemas、权限、退出码、错误码和结构化 guard 判断规则。
 
 ## Agent 工作流
 
-1. 安装二进制和 Skill，然后运行 `context`、`doctor`、`reference`。
-2. 以实时 `reference` 作为命令、参数、schema、权限层和退出码的真相源。
-3. 用 `--compact` 和 `--fields` 减少上下文；列表按各自分页参数读取，不假定一页装得下全部结果。
-4. 读命令保持只读；`guard run-once` 只报告判断。
-5. 写操作先 dry-run 并检查 preview，再用 token 原样重复。账号状态和 raw 写入在两次调用中还都必须得到显式 `--dangerous` 授权。
-6. 每次写后重新读取状态。客户端重读验证不等于服务端 CAS。
-7. 外部包升级后重新安装 Skill，读取 `changelog`，再刷新 `reference`、`context`、`doctor`。
+1. 用上面的代码块安装二进制和 Skill。
+2. 在本地 shell 或密钥管理器中配置 endpoint 和凭据；绝不提交它们。
+3. 运行 `context` 和 `doctor` 完成预检。
+4. 运行 `reference`，并以其实时输出作为命令、参数、schema、权限层和退出码的真相源。
+5. 用 `--compact` 和 `--fields` 减少上下文；列表按各自分页参数读取，不假定一页装得下全部结果。
+6. 读命令保持只读；`guard run-once` 只报告判断。
+7. 写操作先 dry-run 并检查 preview，再用 token 原样重复。账号状态和 raw 写入在两次调用中还都必须得到显式 `--dangerous` 授权。
+8. 每次写后重新读取状态。客户端重读验证不等于服务端 CAS。
+9. 外部包升级后重新安装 Skill，读取 `changelog`，再刷新 `reference`、`context`、`doctor`。
 
-### 写操作安全
+写操作示例：
 
 ```bash
 cliproxyapi-cli auth-file set-status \
@@ -79,7 +83,7 @@ cliproxyapi-cli auth-file set-status \
 
 ## 机器契约
 
-- 默认输出 JSON；stdout 恰好包含一个成功或失败 envelope，诊断写 stderr。
+- 默认输出 JSON；envelope 包含 `ok`、`schema_version`、`data` 或 `error`、`meta`。stdout 恰好包含一个 envelope，诊断写 stderr。
 - 先检查 `ok`，再读取 `data` 或 `error`；`schema_version` 与工具版本独立。
 - `error.code`、进程退出码和 `retryable` 遵循 vendored 的 canonical contract。
 - `reference.commands[]` 发布命令参数、输出 schema、权限层、写闸门、状态验证与重试语义。
@@ -128,14 +132,16 @@ finally {
 
 ```text
 cliproxyapi-cli/
+├── AGENTS.md               # Agent 首先读取的入口
+├── .agent/                 # 固定版本的 AI-native CLI、Skill 与安全规范
+├── .github/                # CI、release、issue、PR 与依赖自动化
 ├── cmd/                    # Cobra 命令与命令级测试
 ├── internal/               # API、配置、确认、guard、输出、配额
 ├── contract/               # vendored canonical JSON contract
-├── .agent/                 # 固定版本的 AI-native CLI 规范
-├── skills/cliproxyapi-cli/ # 内置 Skill 与 eval prompts
-├── docs/                   # 兼容性、E2E、开源检查清单
-├── scripts/                # 规范/版本/npm 分发工具
-└── .github/workflows/      # CI 与发布流水线
+├── docs/                   # 兼容性、E2E 与开源检查清单
+├── skills/cliproxyapi-cli/ # 内置 Agent Skill 与 eval prompts
+├── scripts/                # 规范、版本与 npm 分发工具
+└── package.json            # npm 壳分发与版本真相源
 ```
 
 ## 开发
@@ -151,9 +157,9 @@ npm audit --audit-level=high --omit=optional
 npm pack --dry-run --json --ignore-scripts
 ```
 
-### 发布就绪度
+发布门禁：README、Skill、`reference`、`--help`、`context`、`doctor` 或 `changelog` 中声明的每个公开行为都必须有命令级测试。功能契约覆盖率为 100%；数字代码覆盖率是辅助指标。
 
-`1.0.0` 是计划中的首个带 tag 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0，并如实声明为 `beta`：命令/FCC 和 mock upstream 证据已验证，但仍缺少绑定发布 commit 的一次性真实 Codex smoke。证据记入 [docs/E2E.md](docs/E2E.md) 前不得声称 `stable`。
+发布就绪度：`1.0.0` 是计划中的首个带 tag 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0，并如实声明为 `beta`：命令/FCC 和 mock upstream 证据已验证，但仍缺少绑定发布 commit 的一次性真实 Codex smoke。证据记入 [docs/E2E.md](docs/E2E.md) 前不得声称 `stable`。
 
 ## 链接
 
