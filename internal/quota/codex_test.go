@@ -30,8 +30,11 @@ func TestAssessCodexHealthy(t *testing.T) {
 		t.Fatalf("len(Windows) = %d, want 1", len(got.Windows))
 	}
 	w := got.Windows[0]
-	if w.Name != "primary" || w.UsedPercent == nil || *w.UsedPercent != 42.5 {
+	if w.Name != "primary" || w.UsedPercent == nil || *w.UsedPercent != 42.5 || w.RemainingPercent == nil || *w.RemainingPercent != 57.5 {
 		t.Fatalf("unexpected primary window: %#v", w)
+	}
+	if got.UsedPercent == nil || *got.UsedPercent != 42.5 || got.RemainingPercent == nil || *got.RemainingPercent != 57.5 {
+		t.Fatalf("unexpected assessment percentages: %#v", got)
 	}
 	wantReset := now.Add(time.Minute)
 	if w.ResetAt == nil || !w.ResetAt.Equal(wantReset) {

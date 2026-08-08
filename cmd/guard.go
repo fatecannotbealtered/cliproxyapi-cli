@@ -113,7 +113,7 @@ func (b *managementGuardBackend) ProbeCodex(ctx context.Context, account guard.A
 		Header: map[string]string{
 			"Authorization":      "Bearer $TOKEN$",
 			"Content-Type":       "application/json",
-			"User-Agent":         "cliproxyapi-cli/" + version,
+			"User-Agent":         codexUsageUserAgent,
 			"Chatgpt-Account-Id": account.ChatGPTAccountID,
 		},
 	})

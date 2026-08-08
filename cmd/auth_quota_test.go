@@ -320,7 +320,9 @@ func TestQuotaInspectUsesFixedCodexProbeAndUnknownIsSuccess(t *testing.T) {
 			if request.AuthIndex != "idx-1" || request.Method != http.MethodGet || request.URL != codexUsageURL {
 				t.Errorf("api-call request = %#v", request)
 			}
-			if request.Header["Authorization"] != "Bearer $TOKEN$" || request.Header["Chatgpt-Account-Id"] != "acct-from-claims" {
+			if request.Header["Authorization"] != "Bearer $TOKEN$" ||
+				request.Header["Chatgpt-Account-Id"] != "acct-from-claims" ||
+				request.Header["User-Agent"] != "codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal" {
 				t.Errorf("api-call headers = %#v", request.Header)
 			}
 			writeCommandJSON(t, w, map[string]any{
@@ -490,6 +492,14 @@ func TestQuotaInspectPaginatesBeforeProbing(t *testing.T) {
 	items := data["items"].([]any)
 	if len(items) != 1 || items[0].(map[string]any)["name"] != "bravo.json" || data["count"] != float64(1) || data["offset"] != float64(1) || data["next_offset"] != float64(2) || data["has_more"] != true {
 		t.Fatalf("page = %#v", data)
+	}
+	item := items[0].(map[string]any)
+	if item["used_percent"] != float64(50) || item["remaining_percent"] != float64(50) {
+		t.Fatalf("quota percentages = %#v", item)
+	}
+	windows := item["windows"].([]any)
+	if len(windows) != 1 || windows[0].(map[string]any)["used_percent"] != float64(50) || windows[0].(map[string]any)["remaining_percent"] != float64(50) {
+		t.Fatalf("quota windows = %#v", windows)
 	}
 	if len(probed) != 1 || probed[0] != "idx-b" {
 		t.Fatalf("probed = %#v, want only idx-b", probed)

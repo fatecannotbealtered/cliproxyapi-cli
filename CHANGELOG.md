@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-09
+
+### Added
+
+- Report `remaining_percent` alongside upstream `used_percent` for each recognized Codex quota window and the overall assessment.
+
+### Changed
+
+- Match the Codex quota and guard probe headers used by the Management Web UI.
+
+### Fixed
+
+- Remove the ambiguous `0%` quota presentation by labeling consumed and remaining percentages separately.
+
 ## [1.0.0] - 2026-08-08
 
 ### Added
@@ -43,5 +57,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Bind saved credentials to their normalized Management base URL, require dry-run/confirm for login/logout changes, and fail when the OS keyring is unavailable instead of falling back to argv or a plaintext secret file.
 - Require Go 1.26.5 or newer for builds so distributed binaries include current standard-library security fixes.
 
-[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0

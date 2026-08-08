@@ -52,7 +52,10 @@ func (f *guardManagementFixture) handler(response http.ResponseWriter, request *
 			http.Error(response, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if payload.AuthIndex != "idx-1" || payload.URL != codexUsageURL || payload.Header["Chatgpt-Account-Id"] != f.accountID || payload.Header["Authorization"] != "Bearer $TOKEN$" {
+		if payload.AuthIndex != "idx-1" || payload.URL != codexUsageURL ||
+			payload.Header["Chatgpt-Account-Id"] != f.accountID ||
+			payload.Header["Authorization"] != "Bearer $TOKEN$" ||
+			payload.Header["User-Agent"] != "codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal" {
 			http.Error(response, "unexpected probe", http.StatusBadRequest)
 			return
 		}

@@ -23,18 +23,20 @@ const (
 type Window struct {
 	Name               string     `json:"name"`
 	UsedPercent        *float64   `json:"used_percent,omitempty"`
+	RemainingPercent   *float64   `json:"remaining_percent,omitempty"`
 	LimitWindowSeconds *float64   `json:"limit_window_seconds,omitempty"`
 	ResetAt            *time.Time `json:"reset_at,omitempty"`
 }
 
 type Assessment struct {
-	State       State          `json:"state"`
-	Reason      string         `json:"reason"`
-	UsedPercent *float64       `json:"used_percent,omitempty"`
-	ResetAt     *time.Time     `json:"reset_at,omitempty"`
-	Windows     []Window       `json:"windows"`
-	Evidence    map[string]any `json:"evidence"`
-	Untrusted   []string       `json:"_untrusted,omitempty"`
+	State            State          `json:"state"`
+	Reason           string         `json:"reason"`
+	UsedPercent      *float64       `json:"used_percent,omitempty"`
+	RemainingPercent *float64       `json:"remaining_percent,omitempty"`
+	ResetAt          *time.Time     `json:"reset_at,omitempty"`
+	Windows          []Window       `json:"windows"`
+	Evidence         map[string]any `json:"evidence"`
+	Untrusted        []string       `json:"_untrusted,omitempty"`
 }
 
 type parsedWindow struct {
@@ -118,6 +120,7 @@ func AssessCodex(statusCode int, body []byte, now time.Time) Assessment {
 			result.Reason = errorReason
 		}
 		result.UsedPercent = highestExhaustedPercent(rate.windows)
+		result.RemainingPercent = remainingPercent(result.UsedPercent)
 		result.ResetAt = exhaustionReset(rate)
 		if usage.resetAt != nil && (result.ResetAt == nil || usage.resetAt.Before(*result.ResetAt)) {
 			result.ResetAt = timePointer(*usage.resetAt)
@@ -129,6 +132,7 @@ func AssessCodex(statusCode int, body []byte, now time.Time) Assessment {
 		result.State = StateHealthy
 		result.Reason = "recognized rate-limit windows are below exhaustion"
 		result.UsedPercent = highestKnownPercent(rate.windows)
+		result.RemainingPercent = remainingPercent(result.UsedPercent)
 		return result
 	}
 
@@ -451,6 +455,7 @@ func parseWindow(name string, object map[string]any, now time.Time) parsedWindow
 		} else {
 			parsed.recognized = true
 			parsed.window.UsedPercent = floatPointer(value)
+			parsed.window.RemainingPercent = remainingPercent(parsed.window.UsedPercent)
 			parsed.exhausted = value >= 100
 		}
 	}
@@ -644,6 +649,14 @@ func lookupAlias(object map[string]any, snake, camel string) (any, bool, bool) {
 
 func floatPointer(value float64) *float64 {
 	return &value
+}
+
+func remainingPercent(used *float64) *float64 {
+	if used == nil {
+		return nil
+	}
+	remaining := math.Max(0, 100-*used)
+	return floatPointer(remaining)
 }
 
 func timePointer(value time.Time) *time.Time {

@@ -51,11 +51,14 @@ func TestReferenceCommandHasCanonicalSelfDescription(t *testing.T) {
 	}
 	var contextParams []any
 	var rawReference map[string]any
+	var quotaReference map[string]any
 	for _, raw := range commands {
 		command := raw.(map[string]any)
 		switch command["path"] {
 		case "cliproxyapi-cli context":
 			contextParams = command["params"].([]any)
+		case "cliproxyapi-cli quota inspect":
+			quotaReference = command
 		case "cliproxyapi-cli raw request":
 			rawReference = command
 		}
@@ -74,6 +77,9 @@ func TestReferenceCommandHasCanonicalSelfDescription(t *testing.T) {
 	if rawReference == nil || rawReference["permission_tier"] != "dangerous" || rawReference["write_gate"] != "dangerous_dry_run_confirm" {
 		t.Errorf("raw request contract = %#v", rawReference)
 	}
+	if quotaReference == nil || !strings.Contains(quotaReference["blast_radius"].(string), "used and remaining percentages") {
+		t.Errorf("quota inspect contract = %#v", quotaReference)
+	}
 }
 
 func TestVersionAndHelpSurface(t *testing.T) {
@@ -85,6 +91,11 @@ func TestVersionAndHelpSurface(t *testing.T) {
 	exit, stdout, stderr = runCommand(t, "--help")
 	if exit != 0 || stderr != "" || !bytes.Contains(stdout, []byte("Available Commands:")) {
 		t.Fatalf("help exit=%d stderr=%q stdout=%q", exit, stderr, stdout)
+	}
+
+	exit, stdout, stderr = runCommand(t, "quota", "inspect", "--help")
+	if exit != 0 || stderr != "" || !bytes.Contains(stdout, []byte("used and remaining quota percentages")) {
+		t.Fatalf("quota help exit=%d stderr=%q stdout=%q", exit, stderr, stdout)
 	}
 }
 

@@ -13,22 +13,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const codexUsageURL = "https://chatgpt.com/backend-api/wham/usage"
+const (
+	codexUsageURL       = "https://chatgpt.com/backend-api/wham/usage"
+	codexUsageUserAgent = "codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal"
+)
 
 type quotaInspectionItem struct {
-	Target      string          `json:"target"`
-	OK          bool            `json:"ok"`
-	Error       *quotaItemError `json:"error,omitempty"`
-	Name        string          `json:"name"`
-	AuthIndex   string          `json:"auth_index"`
-	Provider    string          `json:"provider"`
-	StatusCode  int             `json:"status_code,omitempty"`
-	State       quota.State     `json:"state"`
-	Reason      string          `json:"reason"`
-	UsedPercent *float64        `json:"used_percent,omitempty"`
-	ResetAt     *time.Time      `json:"reset_at,omitempty"`
-	Windows     []quota.Window  `json:"windows"`
-	Evidence    map[string]any  `json:"evidence"`
+	Target           string          `json:"target"`
+	OK               bool            `json:"ok"`
+	Error            *quotaItemError `json:"error,omitempty"`
+	Name             string          `json:"name"`
+	AuthIndex        string          `json:"auth_index"`
+	Provider         string          `json:"provider"`
+	StatusCode       int             `json:"status_code,omitempty"`
+	State            quota.State     `json:"state"`
+	Reason           string          `json:"reason"`
+	UsedPercent      *float64        `json:"used_percent,omitempty"`
+	RemainingPercent *float64        `json:"remaining_percent,omitempty"`
+	ResetAt          *time.Time      `json:"reset_at,omitempty"`
+	Windows          []quota.Window  `json:"windows"`
+	Evidence         map[string]any  `json:"evidence"`
 }
 
 type quotaItemError struct {
@@ -51,7 +55,7 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 	var offset int
 	command := &cobra.Command{
 		Use:   "inspect",
-		Short: "Inspect Codex auth records sorted by name, provider, auth_index, and id through the fixed ChatGPT usage endpoint",
+		Short: "Inspect Codex auth records and report used and remaining quota percentages",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			if a.dryRun || strings.TrimSpace(a.confirm) != "" {
@@ -106,7 +110,7 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 					Header: map[string]string{
 						"Authorization":      "Bearer $TOKEN$",
 						"Content-Type":       "application/json",
-						"User-Agent":         "cliproxyapi-cli/" + version,
+						"User-Agent":         codexUsageUserAgent,
 						"Chatgpt-Account-Id": accountID,
 					},
 				})
@@ -121,18 +125,19 @@ func (a *application) quotaInspectCommand() *cobra.Command {
 				}
 				assessment := quota.AssessCodex(response.StatusCode, response.Body, time.Now().UTC())
 				items = append(items, quotaInspectionItem{
-					Target:      quotaTarget(file),
-					OK:          true,
-					Name:        file.Name,
-					AuthIndex:   file.AuthIndex,
-					Provider:    "codex",
-					StatusCode:  response.StatusCode,
-					State:       assessment.State,
-					Reason:      assessment.Reason,
-					UsedPercent: assessment.UsedPercent,
-					ResetAt:     assessment.ResetAt,
-					Windows:     assessment.Windows,
-					Evidence:    assessment.Evidence,
+					Target:           quotaTarget(file),
+					OK:               true,
+					Name:             file.Name,
+					AuthIndex:        file.AuthIndex,
+					Provider:         "codex",
+					StatusCode:       response.StatusCode,
+					State:            assessment.State,
+					Reason:           assessment.Reason,
+					UsedPercent:      assessment.UsedPercent,
+					RemainingPercent: assessment.RemainingPercent,
+					ResetAt:          assessment.ResetAt,
+					Windows:          assessment.Windows,
+					Evidence:         assessment.Evidence,
 				})
 			}
 			data := map[string]any{

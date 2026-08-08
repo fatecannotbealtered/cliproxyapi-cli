@@ -43,15 +43,17 @@ Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea
 
 The parser accepts snake_case and camelCase forms of the known `rate_limit`, primary-window, and secondary-window fields. It also recognizes current account-level `rate_limit_reached_type` values and `spend_control.reached`. It recognizes Unix-second or RFC 3339 reset timestamps and relative reset seconds.
 
+The upstream response defines `used_percent` as consumed allowance. The CLI returns that value unchanged and also derives `remaining_percent` as `max(0, 100 - used_percent)` for parity with the Management Web UI, which displays remaining allowance. Quota and guard probes use the same upstream request headers observed in that UI.
+
 `additional_rate_limits` are model- or feature-scoped. An exhausted additional limit makes the overall assessment unknown: it cannot authorize changing an entire account, and it cannot be mistaken for a healthy whole-account signal. `credits.has_credits=false` alone is also not proof that the subscription's normal quota is exhausted.
 
 Compatibility intentionally fails closed. Only explicit structured signals can report confirmed exhaustion. HTTP 429 alone, transport errors, free-form phrases, missing fields, and unknown schemas remain unknown and do not authorize a write.
 
-The provider probe is fixed to the Codex client's current ChatGPT usage endpoint. That endpoint is an implementation dependency observed in the open-source Codex client, not a stable public Platform API contract. Arbitrary upstream URLs are not accepted by the quota or guard commands, and unknown response variants fail closed.
+The provider probe is fixed to the Codex client's current ChatGPT usage endpoint. That endpoint and its client-identifying request headers are implementation dependencies observed in the Management Web UI, not stable public Platform API contracts. Arbitrary upstream URLs are not accepted by the quota or guard commands, and unknown response variants fail closed.
 
 ## Explicit Non-Goals
 
-Version `1.0.0` does not provide:
+Version `1.0.1` does not provide:
 
 - OAuth or browser-based login;
 - a plaintext credential-store fallback;

@@ -2,7 +2,7 @@
   {
     "id": "fresh-agent-quota-read",
     "prompt": "Use cliproxyapi-cli to inspect the Codex quota of the accounts visible to my CLIProxyAPI Management key.",
-    "expected": "Run reference, context, and doctor first; verify the binary meets the Skill minimum version; select current arguments from reference; use compact JSON; keep healthy, confirmed-exhausted, and unknown distinct."
+    "expected": "Run reference, context, and doctor first; verify the binary meets the Skill minimum version; select current arguments from reference; use compact JSON; keep healthy, confirmed-exhausted, and unknown distinct; label used_percent as consumed allowance and remaining_percent as allowance left instead of comparing the Web UI value with used_percent."
   },
   {
     "id": "false-positive-boundary",

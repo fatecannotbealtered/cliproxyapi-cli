@@ -72,8 +72,12 @@ func TestQuotaInspectReportsConfirmedExhaustionFromStructuredCodexSignal(t *test
 		t.Fatalf("data = %#v", data)
 	}
 	item := items[0].(map[string]any)
-	if item["state"] != "confirmed_exhausted" || item["reset_at"] != resetAt || item["used_percent"] != float64(100) {
+	if item["state"] != "confirmed_exhausted" || item["reset_at"] != resetAt || item["used_percent"] != float64(100) || item["remaining_percent"] != float64(0) {
 		t.Fatalf("item = %#v", item)
+	}
+	windows := item["windows"].([]any)
+	if len(windows) != 1 || windows[0].(map[string]any)["remaining_percent"] != float64(0) {
+		t.Fatalf("windows = %#v", windows)
 	}
 	evidence := item["evidence"].(map[string]any)
 	rateLimit := evidence["rate_limit"].(map[string]any)
