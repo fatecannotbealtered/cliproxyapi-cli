@@ -49,6 +49,43 @@ func TestReferenceCommandHasCanonicalSelfDescription(t *testing.T) {
 			t.Errorf("leaf has incomplete contract: %#v", command)
 		}
 	}
+	var contextParams []any
+	var rawReference map[string]any
+	for _, raw := range commands {
+		command := raw.(map[string]any)
+		switch command["path"] {
+		case "cliproxyapi-cli context":
+			contextParams = command["params"].([]any)
+		case "cliproxyapi-cli raw request":
+			rawReference = command
+		}
+	}
+	for _, required := range []string{"compact", "fields", "format", "state-dir", "timeout"} {
+		found := false
+		for _, raw := range contextParams {
+			if raw.(map[string]any)["name"] == required {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("context params missing inherited flag %q: %#v", required, contextParams)
+		}
+	}
+	if rawReference == nil || rawReference["permission_tier"] != "dangerous" || rawReference["write_gate"] != "dangerous_dry_run_confirm" {
+		t.Errorf("raw request contract = %#v", rawReference)
+	}
+}
+
+func TestVersionAndHelpSurface(t *testing.T) {
+	exit, stdout, stderr := runCommand(t, "--version")
+	if exit != 0 || stderr != "" || string(stdout) != "cliproxyapi-cli version "+version+"\n" {
+		t.Fatalf("version exit=%d stderr=%q stdout=%q", exit, stderr, stdout)
+	}
+
+	exit, stdout, stderr = runCommand(t, "--help")
+	if exit != 0 || stderr != "" || !bytes.Contains(stdout, []byte("Available Commands:")) {
+		t.Fatalf("help exit=%d stderr=%q stdout=%q", exit, stderr, stdout)
+	}
 }
 
 func TestContextCommandDoesNotExposeManagementKey(t *testing.T) {
@@ -81,8 +118,8 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		check := raw.(map[string]any)
 		if check["check"] == "release_readiness" {
 			found = true
-			if check["status"] != "warn" {
-				t.Fatalf("release_readiness check = %#v, want beta warning", check)
+			if check["status"] != "pass" || check["fix"] != nil {
+				t.Fatalf("release_readiness check = %#v, want stable pass", check)
 			}
 		}
 	}
@@ -90,18 +127,18 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		t.Fatalf("release_readiness check missing: %#v", checks)
 	}
 	readiness := decodeEnvelope(t, stdout)["data"].(map[string]any)["release_readiness"].(map[string]any)
-	if readiness["level"] != "beta" || readiness["fcc_status"] != "verified" || readiness["mock_upstream_status"] != "verified" || readiness["live_smoke_status"] != "missing" {
+	if readiness["level"] != "stable" || readiness["fcc_status"] != "verified" || readiness["mock_upstream_status"] != "verified" || readiness["live_smoke_status"] != "verified" {
 		t.Fatalf("release_readiness = %#v", readiness)
 	}
 }
 
 func TestChangelogCommandFiltersSince(t *testing.T) {
-	exit, stdout, _ := runCommand(t, "changelog", "--since", "1.0.0", "--compact")
+	exit, stdout, _ := runCommand(t, "changelog", "--since", version, "--compact")
 	if exit != 0 {
 		t.Fatalf("exit=%d stdout=%s", exit, stdout)
 	}
 	data := decodeEnvelope(t, stdout)["data"].(map[string]any)
-	if data["current_version"] != "1.0.0" || data["since"] != "1.0.0" {
+	if data["current_version"] != version || data["since"] != version {
 		t.Fatalf("changelog = %#v", data)
 	}
 	if len(data["entries"].([]any)) != 0 {

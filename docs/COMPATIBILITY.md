@@ -29,21 +29,21 @@ The modeled implementation uses this small Management API surface:
 
 | Route | Purpose | Verification status |
 |-------|---------|---------------------|
-| `GET /auth-files` | Enumerate auth metadata | Mock/contract tests plus local Docker smoke against CLIProxyAPI `v7.2.120` (`ea37d13`) |
-| `PATCH /auth-files/status` | Enable or disable one auth record | Mock/contract tests plus dry-run, confirmed write, re-read verification, and restore against `v7.2.120` |
-| `POST /api-call` | Perform the allowlisted Codex quota probe | Mock/contract tests plus Management API transport smoke against `v7.2.120`; no real Codex quota decision recorded |
+| `GET /auth-files` | Enumerate auth metadata | Mock/contract tests, local Docker smoke against CLIProxyAPI `v7.2.120` (`ea37d13`), and the authorized production E2E against `v7.2.114` (`41fc5e1`) |
+| `PATCH /auth-files/status` | Enable or disable one auth record | Mock/contract tests plus a local status round-trip against `v7.2.120` and a dangerous, confirmed idempotent production write with re-read verification against `v7.2.114` |
+| `POST /api-call` | Perform the allowlisted Codex quota probe | Mock/contract and local transport tests plus 37 successful real-Codex production probes: 36 healthy and 1 confirmed exhausted |
 
 `raw request` can invoke another relative path below the configured Management base, but every call requires the dangerous and confirmation gates, response bodies are omitted, and the escape hatch is not a compatibility guarantee for any unmodeled endpoint.
 
 Status writes are verified by the CLI by reading the selected record again after the PATCH. The documented Management API does not expose a conditional-update/CAS field, so this is not a server-side linearizability guarantee against an independent concurrent writer; callers that require that stronger property must serialize writers at the orchestration layer.
 
-The only live Management API version checked so far is CLIProxyAPI `v7.2.120` at commit `ea37d13`. That release accepts `auth_index` as an additional `/auth-files/status` selector and exposes parsed `id_token` claims in `/auth-files`; the current public Management API page does not promise those two details as a versioned contract. The CLI therefore treats missing claims as unknown and performs no quota write. Until a traceable disposable real-Codex run is added to [E2E.md](E2E.md), release readiness must remain below `stable` and the running binary's `reference.release_readiness` is authoritative.
+Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea37d13` and the authorized production run against `v7.2.114` at commit `41fc5e1`. The production run is bound to CLI candidate `f3c5c4a` and recorded in [E2E.md](E2E.md). The observed releases accept `auth_index` as an additional `/auth-files/status` selector and expose parsed `id_token` claims in `/auth-files`; the public Management API page does not promise those details as a versioned contract. The CLI therefore still treats missing claims as unknown and performs no quota write. This evidence supports `stable` for `1.0.0`; it is not a compatibility promise for untested upstream releases.
 
 ## Codex Quota Response
 
 The parser accepts snake_case and camelCase forms of the known `rate_limit`, primary-window, and secondary-window fields. It also recognizes current account-level `rate_limit_reached_type` values and `spend_control.reached`. It recognizes Unix-second or RFC 3339 reset timestamps and relative reset seconds.
 
-`additional_rate_limits` are model- or feature-scoped. An exhausted additional limit makes the overall assessment unknown: it cannot authorize disabling an entire account, and it cannot be mistaken for a healthy signal that restores an account. `credits.has_credits=false` alone is also not proof that the subscription's normal quota is exhausted.
+`additional_rate_limits` are model- or feature-scoped. An exhausted additional limit makes the overall assessment unknown: it cannot authorize changing an entire account, and it cannot be mistaken for a healthy whole-account signal. `credits.has_credits=false` alone is also not proof that the subscription's normal quota is exhausted.
 
 Compatibility intentionally fails closed. Only explicit structured signals can report confirmed exhaustion. HTTP 429 alone, transport errors, free-form phrases, missing fields, and unknown schemas remain unknown and do not authorize a write.
 

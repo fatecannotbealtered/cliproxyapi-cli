@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,30 +13,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	guardStateFile = "guard-state.json"
-	guardLockFile  = "guard.lock"
-)
-
 func (a *application) guardCommand() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "guard",
-		Short: "Conservatively disable exhausted Codex accounts and restore owned accounts",
+		Short: "Evaluate Codex quota guard decisions without changing account state",
 	}
 	command.AddCommand(a.guardRunOnceCommand())
-	command.AddCommand(a.guardStateCommand())
 	return command
 }
 
 func (a *application) guardRunOnceCommand() *cobra.Command {
-	var apply bool
 	command := &cobra.Command{
 		Use:   "run-once",
-		Short: "Run one quota guard pass; observe unless --apply is explicit",
+		Short: "Run one observation-only quota guard pass",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			if a.dryRun || strings.TrimSpace(a.confirm) != "" {
-				return output.NewError("E_USAGE", "guard run-once uses observation mode by default and --apply for automation; it does not accept confirmation flags", nil)
+				return output.NewError("E_USAGE", "guard run-once is observation-only and does not accept confirmation flags", nil)
 			}
 			cfg, err := a.runtimeConfig(true)
 			if err != nil {
@@ -48,91 +40,37 @@ func (a *application) guardRunOnceCommand() *cobra.Command {
 				return err
 			}
 			backend := &managementGuardBackend{client: client}
-			runner := guard.NewRunner(
-				backend,
-				guard.NewStore(filepath.Join(cfg.StateDir, guardStateFile)),
-				guard.NewFileLock(filepath.Join(cfg.StateDir, guardLockFile)),
-			)
-			result := runner.RunOnce(command.Context(), apply)
-			data := guardResultData(apply, result)
+			runner := guard.NewRunner(backend, nil, nil)
+			result := runner.RunOnce(command.Context(), false)
+			data := guardResultData(result)
 			if result.IsFatal() {
-				code := "E_IO"
-				switch result.FatalError {
-				case guard.FatalLockHeld:
-					code = "E_CONFLICT"
-				case guard.FatalListFailed:
+				if result.FatalError == guard.FatalListFailed {
 					if backend.lastError != nil {
 						return output.WrapError(asCLIError(backend.lastError).Code, "guard could not list auth records", backend.lastError, data)
 					}
-					code = "E_SERVER"
-				case guard.FatalDependencyMissing:
-					code = "E_UNKNOWN"
 				}
-				return output.NewError(code, "guard run could not start or finish safely", data)
+				return output.NewError("E_UNKNOWN", "guard run could not start or finish safely", data)
 			}
 			if result.PartialFailure {
 				if backend.lastError != nil {
 					return output.WrapError(asCLIError(backend.lastError).Code, "guard run completed with failed decisions", backend.lastError, data)
 				}
-				code := "E_UNKNOWN"
-				for _, decision := range result.Decisions {
-					if decision.Outcome != guard.OutcomeFailed {
-						continue
-					}
-					switch decision.Reason {
-					case guard.ReasonStateWriteFailed:
-						code = "E_IO"
-					case guard.ReasonVerificationFailed:
-						if code == "E_UNKNOWN" {
-							code = "E_CONFLICT"
-						}
-					}
-				}
-				return output.NewError(code, "guard run completed with failed decisions", data)
+				return output.NewError("E_UNKNOWN", "guard run completed with failed decisions", data)
 			}
 			return a.success(data)
 		},
 	}
-	command.Flags().BoolVar(&apply, "apply", false, "Apply suggested disable, enable, and ownership-state actions")
 	return command
 }
 
-func (a *application) guardStateCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "state",
-		Short: "Read local guard ownership state",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if a.dryRun || strings.TrimSpace(a.confirm) != "" {
-				return output.NewError("E_USAGE", "guard state is read-only and does not accept confirmation flags", nil)
-			}
-			cfg, err := a.runtimeConfig(false)
-			if err != nil {
-				return err
-			}
-			records, err := guard.NewStore(filepath.Join(cfg.StateDir, guardStateFile)).Records()
-			if err != nil {
-				return output.WrapError("E_IO", "failed to read guard ownership state", err, nil)
-			}
-			return a.success(map[string]any{
-				"items":      records,
-				"count":      len(records),
-				"_untrusted": []string{"items.name"},
-			})
-		},
-	}
-}
-
-func guardResultData(apply bool, result guard.Result) map[string]any {
+func guardResultData(result guard.Result) map[string]any {
 	return map[string]any{
-		"apply":           apply,
 		"summary":         result.Summary,
 		"decisions":       result.Decisions,
 		"partial_failure": result.PartialFailure,
 		"fatal":           result.Fatal,
-		"locked":          result.Locked,
 		"fatal_error":     result.FatalError,
-		"_untrusted":      []string{"decisions.name"},
+		"_untrusted":      guardResultUntrustedFields(),
 	}
 }
 

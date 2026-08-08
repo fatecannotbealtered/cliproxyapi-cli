@@ -10,6 +10,19 @@ import (
 
 var testNow = time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
 
+func TestRunOnceObservationDoesNotRequireWriteState(t *testing.T) {
+	account := testAccount("observation")
+	backend := newFakeBackend(account)
+	backend.assessments[account.ID] = Assessment{State: StateHealthy}
+	runner := NewRunner(backend, nil, nil)
+
+	result := runner.RunOnce(context.Background(), false)
+
+	if !result.OK || len(result.Decisions) != 1 || len(backend.writes) != 0 {
+		t.Fatalf("result=%#v writes=%#v", result, backend.writes)
+	}
+}
+
 func TestRunOnceConfirmedExhaustionSuggestsOrDisables(t *testing.T) {
 	account := testAccount("one")
 	resetAt := testNow.Add(time.Hour)

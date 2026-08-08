@@ -26,6 +26,7 @@ const (
 	ReasonConfirmedExhausted = "confirmed_exhausted"
 	ReasonAssessmentUnknown  = "assessment_unknown"
 	ReasonNotExhausted       = "not_confirmed_exhausted"
+	ReasonAlreadyDisabled    = "already_disabled"
 	ReasonProbeFailed        = "probe_failed"
 	ReasonResetNotReached    = "reset_not_reached"
 	ReasonResetMissing       = "reset_at_missing"

@@ -1,7 +1,7 @@
 {
   "name": "@fateforge/cliproxyapi-cli",
   "version": "1.0.0",
-  "description": "inspecting CLIProxyAPI auth accounts, Codex quota, and guard actions",
+  "description": "inspecting CLIProxyAPI auth accounts, Codex quota, and guard decisions",
   "license": "MIT",
   "author": "Sean Guo",
   "repository": {

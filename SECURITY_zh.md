@@ -18,13 +18,11 @@
 
 - 默认端点仅指向 loopback：`http://127.0.0.1:8317/v0/management`；
 - 保存或清除登录必须先 `--dry-run`，再使用匹配且会过期的 `--confirm` token；
-- guard 默认只观察，只有带 `--apply` 才执行动作；
-- 人工 `auth-file set-status` 必须先 `--dry-run`，再使用匹配且会过期的 `--confirm` token；
+- `guard run-once` 只观察，不提供 apply 模式；
+- 人工 `auth-file set-status` 必须显式进入 `--dangerous` 权限层，并先 `--dry-run`，再使用匹配且会过期的 `--confirm` token；
 - 所有 `raw request`（包括 GET）还必须额外带 `--dangerous`，并走同样的 dry-run/confirm 闭环；
-- guard 只恢复被本工具记录为“本工具停用”的账号；
-- 失败、中断或结果不明确的停用不会仅凭随后观察到 disabled 就取得恢复 ownership；
 - guard 和一级账号命令不会删除 auth 记录；
-- 单实例锁避免多个 guard 同时执行。
+- 外部自动化负责避免多个 guard 同时执行。
 
 `raw request` 是高级边界，不是安全保证。确认后的请求可以执行所选相对 Management API 路径暴露、且 Management key 有权执行的任何操作；本工具不会假设 HTTP GET 没有副作用。请使用最小权限的上游 key，并认真检查 preview。任意 Management 端点都可能返回凭据、配置、cookie 或日志，因此成功的 raw 响应正文会被刻意从 stdout 省略。
 
@@ -35,16 +33,16 @@
 - 确认后的 key 保存在当前用户的操作系统凭据库中。默认的 `~/.cliproxyapi-cli/config.json` 只包含非敏感的 `version`、`base_url`、`credential_backend` 三个字段。
 - 普通命令按显式 stdin > 环境变量 > 已保存 keyring 记录的顺序解析凭据。前两种只是临时覆盖，普通命令不会将其持久化。
 - 只有实际 base URL 与已保存 profile 完全匹配时才会使用已保存 key；显式选择其他 URL 绝不会复用它。
-- 工具不提供 Management-key argv 参数或明文密钥文件回退。key 不得进入 argv、提交配置、日志、stdout、stderr、confirm 详情或 guard 状态。
+- 工具不提供 Management-key argv 参数或明文密钥文件回退。key 不得进入 argv、提交配置、日志、stdout、stderr、confirm 详情或本地状态。
 - 操作系统凭据库访问失败时直接报错，不允许降级存储。无头 Linux 必须提供可用的 Secret Service 会话。
 - CI 和调度器在以同一操作系统用户运行且能够访问 keyring 时可以使用已保存 key；否则应通过平台 secret 机制注入临时覆盖。
 - 远程 base URL 应使用 HTTPS。不要仅为了运行本工具而把 CLIProxyAPI Management API 暴露到公网。
 
-本地状态目录会保存零秘密的登录 profile、机器本地 confirm secret、已消费 token 状态、ownership 记录、账号标识、时间戳和凭据指纹，但绝不保存 Management key。`logout` 会删除 profile 及其匹配的 keyring 记录。请把剩余目录视为敏感运维状态。POSIX 写入使用受限的目录/文件 mode；Windows 依赖用户 profile 的 ACL，本项目不声称 POSIX mode 会转换成 Windows ACL。
+本地状态目录会保存零秘密的登录 profile、机器本地 confirm secret、已消费 token 状态、账号标识、时间戳和凭据指纹，但绝不保存 Management key。`logout` 会删除 profile 及其匹配的 keyring 记录。请把剩余目录视为敏感运维状态。POSIX 写入使用受限的目录/文件 mode；Windows 依赖用户 profile 的 ACL，本项目不声称 POSIX mode 会转换成 Windows ACL。
 
 ## 配额判定边界
 
-自动改变账号状态只依赖明确的结构化 provider 证据。支持的耗尽信号刻意保持很窄：`rate_limit.allowed` 为 false、`limit_reached` 为 true、primary/secondary 的 `used_percent` 至少为 100、受支持的账号级 `rate_limit_reached_type`、`spend_control.reached=true`，或结构化 error code/type 精确命中支持值。
+任何账号状态变更决策都只能依赖明确的结构化 provider 证据。只观察的 guard 刻意识别一组很窄的信号：`rate_limit.allowed` 为 false、`limit_reached` 为 true、primary/secondary 的 `used_percent` 至少为 100、受支持的账号级 `rate_limit_reached_type`、`spend_control.reached=true`，或结构化 error code/type 精确命中支持值。
 
 下列情况一律得到 unknown/不可动作的判断，而不是停用决定：
 
@@ -70,13 +68,14 @@ auth 元数据、provider 证据和上游错误文本都可能受攻击者控制
 
 ## 自动化边界
 
-本工具不是 daemon，也不会安装定时任务。cron、systemd timer 和 Windows Task Scheduler 是独立的信任边界。启用周期性 `guard run-once --apply` 前：
+本工具不是 daemon，也不会安装定时任务。cron、systemd timer 和 Windows Task Scheduler 是独立的信任边界。周期工作流必须组合 CLI 的原子命令，不能绕过其安全闸门：
 
 1. 先对目标实例运行纯观察模式；
-2. 检查每个建议的停用/恢复决定；
+2. 检查每个耗尽、未知或失败判断，并重新解析当前目标；
 3. 使用预期的操作系统身份，并限制 keyring 或注入 secret 的访问范围；
-4. 避免并发调用；
-5. 监控非零退出与部分失败。
+4. 对每个已由策略授权的状态变更，使用 `auth-file set-status --dangerous` 的 dry-run/confirm 流程，并验证写后状态；
+5. 避免并发调用；
+6. 监控非零退出与逐项失败。
 
 ## 供应链
 
@@ -86,4 +85,4 @@ auth 元数据、provider 证据和上游错误文本都可能受攻击者控制
 
 ## 设计上不提供
 
-项目不提供 Web UI、daemon、OAuth/浏览器登录、明文凭据存储回退、一级删除流程或自更新机制。绕过上游授权、confirm token、ownership 检查、凭据隔离或 provider 证据规则的请求属于安全问题，不是受支持流程。
+项目不提供 Web UI、daemon、OAuth/浏览器登录、明文凭据存储回退、一级删除流程或自更新机制。绕过上游授权、confirm token、凭据隔离或 provider 证据规则的请求属于安全问题，不是受支持流程。

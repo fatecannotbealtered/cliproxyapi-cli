@@ -2,7 +2,7 @@
 
 *[English](CONTRIBUTING.md) | 中文*
 
-感谢改进 **cliproxyapi-cli** —— inspecting CLIProxyAPI auth accounts, Codex quota, and guard actions。本文档介绍如何构建、测试和提交改动。
+感谢改进 **cliproxyapi-cli** —— 用于检查 CLIProxyAPI auth 账号、Codex 配额和 guard 判断。本文档介绍如何构建、测试和提交改动。
 
 > 这是为 AI 工具实验而分享的业余项目；维护者不提供商业支持或生产环境保证 —— 详见 README 免责声明。
 

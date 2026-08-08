@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -57,6 +59,37 @@ func TestRawRequestRequiresDangerousAndConfirmation(t *testing.T) {
 	if exit != 5 || calls.Load() != 0 || decodeEnvelope(t, stdout)["error"].(map[string]any)["code"] != "E_CONFIRMATION_REQUIRED" {
 		t.Fatalf("without confirm exit=%d calls=%d stdout=%s", exit, calls.Load(), stdout)
 	}
+}
+
+func TestRawRequestMissingConfirmationPrecedesCredentialResolution(t *testing.T) {
+	t.Setenv("CLIPROXYAPI_CLI_MANAGEMENT_KEY", "")
+	t.Setenv("CLIPROXYAPI_CLI_STATE_DIR", t.TempDir())
+
+	stdin := &readTrackingReader{}
+	var stdout, stderr bytes.Buffer
+	exit := ExecuteArgs(context.Background(), []string{
+		"raw", "request",
+		"--base-url", "http://127.0.0.1:1/v0/management",
+		"--path", "/debug",
+		"--body-stdin",
+		"--dangerous",
+		"--compact",
+	}, stdin, &stdout, &stderr)
+	if exit != 5 || decodeEnvelope(t, stdout.Bytes())["error"].(map[string]any)["code"] != "E_CONFIRMATION_REQUIRED" {
+		t.Fatalf("exit=%d stdout=%s", exit, stdout.Bytes())
+	}
+	if stdin.read.Load() {
+		t.Fatal("stdin was read before confirmation was required")
+	}
+}
+
+type readTrackingReader struct {
+	read atomic.Bool
+}
+
+func (r *readTrackingReader) Read([]byte) (int, error) {
+	r.read.Store(true)
+	return 0, io.EOF
 }
 
 func TestRawNonGetRequiresDryRunThenSingleUseConfirm(t *testing.T) {

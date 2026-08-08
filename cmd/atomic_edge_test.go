@@ -106,7 +106,7 @@ func TestAuthFileSetStatusDryRunRejectsAmbiguousNameBeforePatch(t *testing.T) {
 	defer server.Close()
 	configureCommandTest(t, server.URL)
 
-	exit, stdout, _ := runCommand(t, "auth-file", "set-status", "--name", "shared.json", "--disabled=true", "--dry-run", "--compact")
+	exit, stdout, _ := runCommand(t, "auth-file", "set-status", "--name", "shared.json", "--disabled=true", "--dangerous", "--dry-run", "--compact")
 	if exit != 6 {
 		t.Fatalf("exit=%d stdout=%s, want 6", exit, stdout)
 	}
