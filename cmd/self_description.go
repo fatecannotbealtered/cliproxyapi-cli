@@ -35,7 +35,7 @@ func currentReleaseReadiness() releaseReadiness {
 		MockUpstreamStatus:         "verified",
 		LiveSmokeRequiredForStable: true,
 		LiveSmokeStatus:            "verified",
-		Reason:                     "Command-level coverage, mock-upstream contracts, and a recorded authorized production real-Codex E2E are verified for 1.0.0.",
+		Reason:                     "Command-level coverage, mock-upstream contracts, the full 1.0.0 production E2E, and the targeted 1.0.1 quota regression smoke are verified.",
 		RequiredEvidence: []string{
 			"functional_contract_coverage_100",
 			"mock_upstream_contract_tests",

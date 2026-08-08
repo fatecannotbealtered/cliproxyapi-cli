@@ -170,7 +170,7 @@ npm pack --dry-run --json --ignore-scripts
 
 发布门禁：README、Skill、`reference`、`--help`、`context`、`doctor` 或 `changelog` 中声明的每个公开行为都必须有命令级测试。功能契约覆盖率为 100%；数字代码覆盖率是辅助指标。
 
-发布就绪度：`1.0.0` 是首个 stable 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0；命令/FCC、mock upstream contract，以及候选提交 `f3c5c4a` 经明确授权的生产真实 Codex E2E 均已验证。脱敏证据和适用范围见 [docs/E2E.md](docs/E2E.md)。
+发布就绪度：`1.0.0` 是首个 stable 版本。仓库 vendoring `ai-native-cli-spec` v1.5.0；命令/FCC、mock upstream contract，以及候选提交 `f3c5c4a` 经明确授权的生产真实 Codex E2E 均已验证。`1.0.1` 配额修复也完成了绑定候选提交的生产只读回归烟测。脱敏证据和适用范围见 [docs/E2E.md](docs/E2E.md)。
 
 ## 链接
 

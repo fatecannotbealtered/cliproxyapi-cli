@@ -4,6 +4,8 @@
 
 A traceable, explicitly authorized production real-Codex run was completed for the clean `1.0.0` candidate at `f3c5c4a` on 2026-08-08. The run exercised the real Management API, all configured Codex quota probes, observation-only guard decisions, the dangerous dry-run/confirm gate, and post-write re-read verification without changing the requested production state. Together with the existing command/FCC and mock-upstream coverage, this evidence qualifies `1.0.0` for `stable`.
 
+The `1.0.1` quota-semantics candidate at `71bc3de` additionally passed a targeted, read-only production regression smoke on 2026-08-09. It verified all configured Codex probes and the new used/remaining percentage relationship without performing an account write. This supplements rather than replaces the qualifying `1.0.0` full E2E.
+
 ## Accepted Live Test Scope
 
 Prefer a disposable CLIProxyAPI instance and disposable Codex accounts. An explicitly authorized production run may also qualify when it is bound to a clean candidate commit and binary digest, limits writes to the exact approved account state, verifies every write by re-reading, records the intended final state, and retains only sanitized aggregate evidence. Never infer production-write permission from release testing alone.
@@ -31,6 +33,7 @@ Add one row per completed run and link to a sanitized artifact committed under `
 |------|-----------------|-------------------------|----------|-------|--------|----------|
 | 2026-08-06 | Pre-`1.0.0` development snapshot; SHA unavailable | `v7.2.120` / `ea37d13` | Windows amd64 + Docker Desktop | Loopback Management API, synthetic Codex auth, auth list/status round-trip, `/api-call`, unknown-result safety, Windows Credential Manager `login` → credential-free `doctor` → `logout`, and secret-redaction checks | Partial; does not qualify for stable | This record; sanitized command artifact unavailable |
 | 2026-08-08 | `1.0.0` / `f3c5c4a` / binary `461C82AC...17A85` | `v7.2.114` / `41fc5e1` | Windows amd64 | Explicitly authorized production Management API; real quota probes; observation-only guard; dangerous idempotent status write and re-read; retained disabled state | Pass; qualifies for stable | [Sanitized evidence](e2e/2026-08-08-1.0.0-f3c5c4a-production.md), SHA-256 `26534E29...6AC35106` |
+| 2026-08-09 | `1.0.1` / `71bc3de` / binary `99D08A8B...D7432F` | Same authorized deployment; version not re-collected | Windows amd64 | Targeted read-only regression for quota request parity and explicit used/remaining percentages | Pass; supplemental smoke, no write | [Sanitized evidence](e2e/2026-08-09-1.0.1-71bc3de-production.md), SHA-256 `FBBE761C...4955AA3` |
 
 ## Failure Rule
 

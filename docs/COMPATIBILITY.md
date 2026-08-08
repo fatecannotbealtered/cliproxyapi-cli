@@ -31,13 +31,13 @@ The modeled implementation uses this small Management API surface:
 |-------|---------|---------------------|
 | `GET /auth-files` | Enumerate auth metadata | Mock/contract tests, local Docker smoke against CLIProxyAPI `v7.2.120` (`ea37d13`), and the authorized production E2E against `v7.2.114` (`41fc5e1`) |
 | `PATCH /auth-files/status` | Enable or disable one auth record | Mock/contract tests plus a local status round-trip against `v7.2.120` and a dangerous, confirmed idempotent production write with re-read verification against `v7.2.114` |
-| `POST /api-call` | Perform the allowlisted Codex quota probe | Mock/contract and local transport tests plus 37 successful real-Codex production probes: 36 healthy and 1 confirmed exhausted |
+| `POST /api-call` | Perform the allowlisted Codex quota probe | Mock/contract and local transport tests; the `1.0.0` full E2E probed 37 accounts, and the `1.0.1` targeted regression smoke succeeded for 37/37 healthy accounts |
 
 `raw request` can invoke another relative path below the configured Management base, but every call requires the dangerous and confirmation gates, response bodies are omitted, and the escape hatch is not a compatibility guarantee for any unmodeled endpoint.
 
 Status writes are verified by the CLI by reading the selected record again after the PATCH. The documented Management API does not expose a conditional-update/CAS field, so this is not a server-side linearizability guarantee against an independent concurrent writer; callers that require that stronger property must serialize writers at the orchestration layer.
 
-Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea37d13` and the authorized production run against `v7.2.114` at commit `41fc5e1`. The production run is bound to CLI candidate `f3c5c4a` and recorded in [E2E.md](E2E.md). The observed releases accept `auth_index` as an additional `/auth-files/status` selector and expose parsed `id_token` claims in `/auth-files`; the public Management API page does not promise those details as a versioned contract. The CLI therefore still treats missing claims as unknown and performs no quota write. This evidence supports `stable` for `1.0.0`; it is not a compatibility promise for untested upstream releases.
+Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea37d13`, the authorized production run against `v7.2.114` at commit `41fc5e1`, and the targeted `1.0.1` quota regression smoke against the same authorized deployment. The full production run is bound to CLI candidate `f3c5c4a`; the targeted smoke is bound to `71bc3de`; both are recorded in [E2E.md](E2E.md). The observed releases accept `auth_index` as an additional `/auth-files/status` selector and expose parsed `id_token` claims in `/auth-files`; the public Management API page does not promise those details as a versioned contract. The CLI therefore still treats missing claims as unknown and performs no quota write. This evidence supports `stable`; it is not a compatibility promise for untested upstream releases.
 
 ## Codex Quota Response
 

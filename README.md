@@ -170,7 +170,7 @@ npm pack --dry-run --json --ignore-scripts
 
 Release gate: every public behavior documented in README, Skill, `reference`, `--help`, `context`, `doctor`, or `changelog` must have command-level tests. Functional Contract Coverage is 100%; numeric line coverage is secondary.
 
-Release readiness: `1.0.0` is the first stable release. The repository vendors `ai-native-cli-spec` v1.5.0; command/FCC, mock-upstream contracts, and the recorded authorized production real-Codex E2E for candidate `f3c5c4a` are verified. See [docs/E2E.md](docs/E2E.md) for the sanitized evidence and scope.
+Release readiness: `1.0.0` is the first stable release. The repository vendors `ai-native-cli-spec` v1.5.0; command/FCC, mock-upstream contracts, and the recorded authorized production real-Codex E2E for candidate `f3c5c4a` are verified. The `1.0.1` quota patch also has a candidate-bound, read-only production regression smoke. See [docs/E2E.md](docs/E2E.md) for the sanitized evidence and scope.
 
 ## Links
 
