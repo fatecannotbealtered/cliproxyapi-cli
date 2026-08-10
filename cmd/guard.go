@@ -40,8 +40,8 @@ func (a *application) guardRunOnceCommand() *cobra.Command {
 				return err
 			}
 			backend := &managementGuardBackend{client: client}
-			runner := guard.NewRunner(backend, nil, nil)
-			result := runner.RunOnce(command.Context(), false)
+			runner := guard.NewRunner(backend)
+			result := runner.RunOnce(command.Context())
 			data := guardResultData(result)
 			if result.IsFatal() {
 				if result.FatalError == guard.FatalListFailed {
@@ -128,12 +128,4 @@ func (b *managementGuardBackend) ProbeCodex(ctx context.Context, account guard.A
 		ResetAt:     assessment.ResetAt,
 		UsedPercent: assessment.UsedPercent,
 	}, nil
-}
-
-func (b *managementGuardBackend) SetDisabled(ctx context.Context, account guard.Account, disabled bool) error {
-	err := b.client.SetAuthFileDisabled(ctx, account.Name, account.AuthIndex, disabled)
-	if err != nil {
-		b.lastError = err
-	}
-	return err
 }

@@ -181,7 +181,7 @@ func (a *application) printer() *output.Printer {
 func (a *application) success(data any) error {
 	if err := a.printer().Success(data); err != nil {
 		if len(a.fields) > 0 {
-			return output.WrapError("E_VALIDATION", "invalid --fields selection", err, nil)
+			return output.WrapError("E_VALIDATION", "invalid --fields selection: "+err.Error(), err, nil)
 		}
 		return output.WrapError("E_UNKNOWN", "failed to encode command output", err, nil)
 	}

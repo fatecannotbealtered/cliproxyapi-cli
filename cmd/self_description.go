@@ -35,7 +35,7 @@ func currentReleaseReadiness() releaseReadiness {
 		MockUpstreamStatus:         "verified",
 		LiveSmokeRequiredForStable: true,
 		LiveSmokeStatus:            "missing",
-		Reason:                     fmt.Sprintf("The published 1.0.1 provider evidence remains valid, and standalone and npm-managed self-update E2E passed for the development tree; it must be rerun against a clean candidate commit before %s can be stable.", version),
+		Reason:                     fmt.Sprintf("The published 1.0.1 provider evidence remains valid, and both a full disposable-instance E2E and the standalone/npm self-update E2E passed for the development tree; both must be rerun against a clean candidate commit before %s can be stable.", version),
 		RequiredEvidence: []string{
 			"functional_contract_coverage_100",
 			"mock_upstream_contract_tests",

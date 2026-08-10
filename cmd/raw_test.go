@@ -39,6 +39,37 @@ func TestRawGetOmitsResponseBody(t *testing.T) {
 	}
 }
 
+func TestRawDryRunRejectsUnusablePathBeforeIssuingToken(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		_, _ = io.WriteString(response, `{}`)
+	}))
+	defer server.Close()
+	t.Setenv("CLIPROXYAPI_CLI_MANAGEMENT_KEY", "test-key")
+	t.Setenv("CLIPROXYAPI_CLI_STATE_DIR", t.TempDir())
+
+	// A dry-run that hands back a token for a path the execute path will reject
+	// tells the agent the operation is authorized when it can never run.
+	for _, path := range []string{"../../etc/passwd", "%2e%2e/secrets", "https://evil.example/x", `..\windows`} {
+		exit, stdout, _ := runCommand(t, "raw", "request", "--method", "GET", "--path", path,
+			"--dangerous", "--dry-run", "--base-url", server.URL+"/v0/management", "--compact")
+		if exit != 2 {
+			t.Fatalf("path %q: dry-run exit=%d, want 2; stdout=%s", path, exit, stdout)
+		}
+		envelope := decodeEnvelope(t, stdout)
+		if envelope["error"].(map[string]any)["code"] != "E_VALIDATION" {
+			t.Fatalf("path %q: envelope=%#v", path, envelope)
+		}
+		if _, issued := envelope["data"]; issued {
+			t.Fatalf("path %q: dry-run issued a payload for an unusable path: %s", path, stdout)
+		}
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("rejected dry-run reached upstream: calls=%d", calls.Load())
+	}
+}
+
 func TestRawRequestRequiresDangerousAndConfirmation(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {

@@ -32,6 +32,29 @@ func TestPrinterSuccessEnvelope(t *testing.T) {
 	}
 }
 
+func TestPrinterSuccessTextIsNotJSON(t *testing.T) {
+	var out bytes.Buffer
+	printer := NewPrinter(&out, Options{Format: FormatText, StartedAt: time.Now()})
+	data := map[string]any{
+		"count": 1,
+		"items": []any{map[string]any{"id": "a.json", "disabled": false}},
+		"tags":  []any{},
+		"note":  nil,
+	}
+	if err := printer.Success(data); err != nil {
+		t.Fatalf("Success() error = %v", err)
+	}
+
+	var envelope map[string]any
+	if err := json.Unmarshal(out.Bytes(), &envelope); err == nil {
+		t.Fatalf("text output parsed as JSON; it must not be machine-parseable: %s", out.String())
+	}
+	want := "count: 1\nitems[0].disabled: false\nitems[0].id: a.json\nnote: null\ntags: (empty)\n"
+	if out.String() != want {
+		t.Fatalf("text output = %q, want %q", out.String(), want)
+	}
+}
+
 func TestPrinterSuccessEnvelopeIncludesMetaNotices(t *testing.T) {
 	var out bytes.Buffer
 	printer := NewPrinter(&out, Options{Format: FormatJSON, Compact: true, Notices: []any{map[string]any{"type": "update_available", "severity": "info"}}})

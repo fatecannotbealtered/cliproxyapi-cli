@@ -38,7 +38,7 @@ The tool narrows that risk as follows:
 - CI and schedulers may use the saved keyring entry when running as the same OS user with keyring access; otherwise inject a temporary override through the platform's secret mechanism.
 - A remote base URL should use HTTPS. Do not expose the CLIProxyAPI Management API publicly merely to run this tool.
 
-The local state directory stores the zero-secret login profile, a machine-local confirmation secret, consumed-token state, account identifiers, timestamps, and credential fingerprints, but never the Management key. `logout` removes the profile and its matching keyring entry. Treat the remaining directory as sensitive operational state. POSIX writes use restrictive directory/file modes. On Windows, protection relies on the user profile's ACL; the project does not claim POSIX modes translate to Windows ACLs.
+The local state directory stores the zero-secret login profile, a machine-local confirmation secret, consumed-token fingerprints, and the update-notice cache, but never the Management key. The guard keeps no local state at all. `logout` removes the profile and its matching keyring entry. Treat the remaining directory as sensitive operational state. POSIX writes use restrictive directory/file modes. On Windows, protection relies on the user profile's ACL; the project does not claim POSIX modes translate to Windows ACLs.
 
 ## Quota Decision Boundary
 

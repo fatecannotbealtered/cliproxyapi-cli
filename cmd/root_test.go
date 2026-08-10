@@ -372,6 +372,10 @@ func TestJSONAliasAndFieldValidation(t *testing.T) {
 	if errorObject["code"] != "E_VALIDATION" {
 		t.Fatalf("error=%#v", errorObject)
 	}
+	// The offending field must be named, or the agent cannot correct the call.
+	if message, _ := errorObject["message"].(string); !strings.Contains(message, "does_not_exist") {
+		t.Fatalf("message does not name the rejected field: %#v", errorObject)
+	}
 
 	exit, stdout, _ = runCommand(t, "context", "--json", "--format", "text")
 	if exit != 2 {

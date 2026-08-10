@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-08-10
+
+### Changed
+
+- Render `--format text` success output as flat `path: value` lines instead of the unwrapped JSON payload, so human output can no longer be mistaken for the machine envelope.
+
+### Fixed
+
+- Name the rejected field in the `--fields` validation error instead of reporting a generic selection failure.
+- Reject an unusable `raw request` path while previewing. A dry-run for a traversal, percent-encoded traversal, or absolute-URL path previously returned a valid confirm token and only failed at confirm time, telling the agent an impossible operation was authorized; validation now runs through the same resolver the execute path uses.
+
+### Removed
+
+- Remove the unreachable guard apply-mode machinery (ownership state store and cross-process run lock). The guard is observation-only by construction now, not merely by configuration; `summary.applied` and `summary.stale` remain in the result shape as reserved, always-zero counters.
+
 ## [1.0.2] - 2026-08-10
 
 ### Added
@@ -81,7 +96,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Bind saved credentials to their normalized Management base URL, require dry-run/confirm for login/logout changes, and fail when the OS keyring is unavailable instead of falling back to argv or a plaintext secret file.
 - Require Go 1.26.5 or newer for builds so distributed binaries include current standard-library security fixes.
 
-[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0

@@ -38,7 +38,7 @@
 - CI 和调度器在以同一操作系统用户运行且能够访问 keyring 时可以使用已保存 key；否则应通过平台 secret 机制注入临时覆盖。
 - 远程 base URL 应使用 HTTPS。不要仅为了运行本工具而把 CLIProxyAPI Management API 暴露到公网。
 
-本地状态目录会保存零秘密的登录 profile、机器本地 confirm secret、已消费 token 状态、账号标识、时间戳和凭据指纹，但绝不保存 Management key。`logout` 会删除 profile 及其匹配的 keyring 记录。请把剩余目录视为敏感运维状态。POSIX 写入使用受限的目录/文件 mode；Windows 依赖用户 profile 的 ACL，本项目不声称 POSIX mode 会转换成 Windows ACL。
+本地状态目录会保存零秘密的登录 profile、机器本地 confirm secret、已消费 token 指纹和更新提示缓存，但绝不保存 Management key。guard 完全不落地任何本地状态。`logout` 会删除 profile 及其匹配的 keyring 记录。请把剩余目录视为敏感运维状态。POSIX 写入使用受限的目录/文件 mode；Windows 依赖用户 profile 的 ACL，本项目不声称 POSIX mode 会转换成 Windows ACL。
 
 ## 配额判定边界
 

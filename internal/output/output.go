@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
@@ -128,7 +129,7 @@ func (p *Printer) Success(data any) error {
 		return err
 	}
 	if p.options.Format == FormatText {
-		return p.writeJSON(projected)
+		return p.writeText(projected)
 	}
 	return p.writeJSON(successEnvelope{
 		OK:            true,
@@ -183,6 +184,63 @@ func (p *Printer) writeJSON(value any) error {
 	encoded = append(encoded, '\n')
 	_, err = p.out.Write(encoded)
 	return err
+}
+
+// writeText renders a payload as flat "path: value" lines. `text` is for humans
+// only and must not be parsed programmatically, so it stays visibly distinct
+// from the JSON envelope instead of being valid JSON an agent could mistake for
+// one.
+func (p *Printer) writeText(value any) error {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	var decoded any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return err
+	}
+	var builder strings.Builder
+	appendTextLines(&builder, "", decoded)
+	_, err = io.WriteString(p.out, builder.String())
+	return err
+}
+
+func appendTextLines(builder *strings.Builder, path string, value any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			child := key
+			if path != "" {
+				child = path + "." + key
+			}
+			appendTextLines(builder, child, typed[key])
+		}
+	case []any:
+		if len(typed) == 0 {
+			writeTextLine(builder, path, "(empty)")
+			return
+		}
+		for index, item := range typed {
+			appendTextLines(builder, fmt.Sprintf("%s[%d]", path, index), item)
+		}
+	case nil:
+		writeTextLine(builder, path, "null")
+	default:
+		writeTextLine(builder, path, fmt.Sprintf("%v", typed))
+	}
+}
+
+func writeTextLine(builder *strings.Builder, path, value string) {
+	if path == "" {
+		fmt.Fprintf(builder, "%s\n", value)
+		return
+	}
+	fmt.Fprintf(builder, "%s: %s\n", path, value)
 }
 
 func projectFields(data any, fields []string) (any, error) {

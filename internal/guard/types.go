@@ -7,50 +7,32 @@ import (
 
 const (
 	StateConfirmedExhausted = "confirmed_exhausted"
-	StateHealthy            = "healthy"
-	StatePendingDisable     = "pending_disable"
 	StateUnknown            = "unknown"
 
-	DecisionNone             = "none"
-	DecisionDisable          = "disable"
-	DecisionEnable           = "enable"
-	DecisionReleaseOwnership = "release_ownership"
-	DecisionStale            = "stale"
+	DecisionNone    = "none"
+	DecisionDisable = "disable"
 
 	OutcomeSkipped   = "skipped"
 	OutcomeSuggested = "suggested"
-	OutcomeApplied   = "applied"
 	OutcomeFailed    = "failed"
-	OutcomeStale     = "stale"
+	// The guard only observes, so nothing can emit these two. They stay declared
+	// (and counted in Summary) as reserved values rather than disappearing from
+	// the published result shape.
+	OutcomeApplied = "applied"
+	OutcomeStale   = "stale"
 
 	ReasonConfirmedExhausted = "confirmed_exhausted"
 	ReasonAssessmentUnknown  = "assessment_unknown"
 	ReasonNotExhausted       = "not_confirmed_exhausted"
 	ReasonAlreadyDisabled    = "already_disabled"
 	ReasonProbeFailed        = "probe_failed"
-	ReasonResetNotReached    = "reset_not_reached"
 	ReasonResetMissing       = "reset_at_missing"
-	ReasonNotOwned           = "not_owned_by_tool"
-	ReasonFingerprintChanged = "fingerprint_changed"
-	ReasonNotHealthy         = "not_healthy"
-	ReasonHealthy            = "healthy"
-	ReasonWriteFailed        = "write_failed"
-	ReasonVerificationFailed = "write_verification_failed"
-	ReasonStateWriteFailed   = "state_write_failed"
-	ReasonManualEnable       = "manually_enabled"
-	ReasonPendingNotApplied  = "pending_disable_not_applied"
-	ReasonPendingAmbiguous   = "pending_disable_ownership_unproven"
-	ReasonAccountMissing     = "account_missing"
 	ReasonUnstableAuthIndex  = "unstable_auth_index"
 	ReasonRuntimeOnly        = "runtime_only"
 	ReasonMissingAccountID   = "missing_chatgpt_account_id"
 	ReasonDisabledUnknown    = "disabled_status_unknown"
 
 	FatalDependencyMissing = "dependency_missing"
-	FatalLockHeld          = "lock_held"
-	FatalLockFailed        = "lock_failed"
-	FatalLockReleaseFailed = "lock_release_failed"
-	FatalStateLoadFailed   = "state_load_failed"
 	FatalListFailed        = "list_failed"
 )
 
@@ -79,20 +61,6 @@ type Assessment struct {
 type Backend interface {
 	List(context.Context) ([]Account, error)
 	ProbeCodex(context.Context, Account) (Assessment, error)
-	SetDisabled(context.Context, Account, bool) error
-}
-
-type Record struct {
-	Identity       string     `json:"identity"`
-	Name           string     `json:"name"`
-	AuthIndex      string     `json:"auth_index"`
-	Provider       string     `json:"provider"`
-	Fingerprint    string     `json:"fingerprint"`
-	DisabledByTool bool       `json:"disabled_by_tool"`
-	DisabledAt     *time.Time `json:"disabled_at"`
-	ResetAt        *time.Time `json:"reset_at"`
-	LastProbe      *time.Time `json:"last_probe"`
-	LastState      string     `json:"last_state"`
 }
 
 type Decision struct {
@@ -108,6 +76,8 @@ type Decision struct {
 	UsedPercent *float64 `json:"used_percent,omitempty"`
 }
 
+// Summary counts decisions by outcome. `Applied` and `Stale` are reserved and
+// always zero — see the outcome constants above.
 type Summary struct {
 	Total     int `json:"total"`
 	Suggested int `json:"suggested"`
@@ -121,7 +91,6 @@ type Result struct {
 	OK             bool       `json:"ok"`
 	PartialFailure bool       `json:"partial_failure"`
 	Fatal          bool       `json:"fatal"`
-	Locked         bool       `json:"locked"`
 	FatalError     string     `json:"fatal_error,omitempty"`
 	Decisions      []Decision `json:"decisions"`
 	Summary        Summary    `json:"summary"`

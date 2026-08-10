@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -11,8 +10,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/fatecannotbealtered/cliproxyapi-cli/internal/guard"
 )
 
 type guardManagementFixture struct {
@@ -210,31 +207,5 @@ func TestGuardRunOncePartialFailureReturnsFailureEnvelope(t *testing.T) {
 	decision := decisions[0].(map[string]any)
 	if decision["outcome"] != "failed" || decision["reason"] != "probe_failed" {
 		t.Fatalf("decision=%#v", decision)
-	}
-}
-
-func TestGuardRunOnceDoesNotUseLegacyWriteLock(t *testing.T) {
-	fixture := &guardManagementFixture{
-		accountID:     "acct-1",
-		quotaStatus:   http.StatusOK,
-		quotaBody:     `{"rate_limit":{"allowed":true,"primary_window":{"used_percent":25}}}`,
-		managementKey: "test-key",
-	}
-	server := httptest.NewServer(http.HandlerFunc(fixture.handler))
-	defer server.Close()
-	stateDir := t.TempDir()
-	lease, err := guard.NewFileLock(filepath.Join(stateDir, "guard.lock")).Acquire(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := lease.Release(); err != nil {
-			t.Errorf("release legacy write lock: %v", err)
-		}
-	}()
-	t.Setenv("CLIPROXYAPI_CLI_MANAGEMENT_KEY", "test-key")
-	exit, stdout, stderr := runCommand(t, "guard", "run-once", "--base-url", server.URL+"/v0/management", "--state-dir", stateDir, "--compact")
-	if exit != 0 || stderr != "" {
-		t.Fatalf("exit=%d stderr=%q stdout=%s", exit, stderr, stdout)
 	}
 }

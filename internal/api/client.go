@@ -238,6 +238,15 @@ func (c *Client) APICall(ctx context.Context, request APICallRequest) (APICallRe
 	return response, nil
 }
 
+// ValidateRelativePath reports whether a raw request path resolves below the
+// configured Management API base, using the same rules the execute path applies.
+// Callers use it to reject a bad path while previewing, so a dry-run never hands
+// back a confirm token for a request that cannot run.
+func (c *Client) ValidateRelativePath(relativePath string) error {
+	_, err := c.managementURL(relativePath)
+	return err
+}
+
 // RawRequest calls a path below the configured Management API base. It rejects
 // URLs and traversal before constructing the request target.
 func (c *Client) RawRequest(ctx context.Context, method, relativePath string, body []byte) ([]byte, error) {

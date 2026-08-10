@@ -72,6 +72,12 @@ func (a *application) rawRequestCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Validate before the confirm gate, not just before the call: a
+			// dry-run that returns a token for an unusable path tells the agent
+			// the operation is authorized when it can never run.
+			if err := client.ValidateRelativePath(path); err != nil {
+				return err
+			}
 
 			details := rawConfirmDetails(method, path, body, dangerous)
 			contextScope := map[string]any{
