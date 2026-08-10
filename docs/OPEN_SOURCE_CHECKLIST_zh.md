@@ -6,6 +6,15 @@
 
 本地证据包括 Go test/vet/lint、Linux race、六目标交叉构建、版本/规范守卫、npm audit/pack、actionlint、命令级契约测试、Gitleaks `v8.30.1` 对 Git 历史和工作树的扫描，以及[经脱敏的授权生产真实 Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md)。GitHub Actions 证据来自真实 PR、`main` 与 tag 运行；Release 产物和 npm 发布均已根据公开产物实测验证。
 
+这是 `v1.0.0` 首次公开发布产物的冻结证据记录。下方已勾选内容只描述该产物，不能自动证明后续 Unreleased 行为。
+
+## `1.0.2` 自更新增量
+
+- [x] 按明确选择的 patch 增量，将当前已发布的 `1.0.1` 升为 `1.0.2`，未重新作为 `1.0.1` 发布。
+- [x] 验证 update 成功、参数校验、网络/超时/中断、完整性失败、包管理器分发、原子替换、通知缓存和 Skill 部分同步失败的命令级 FCC。
+- [ ] 针对干净候选提交记录隔离的 standalone 与 npm-managed update E2E，包括整个 Skill 同步和更新后版本校验。
+- [ ] 为该候选重新执行完整发布、六种原生架构、npm provenance、安全、版本/规范和 stable 就绪度门禁。
+
 ## 密钥
 
 - [x] 已用 `gitleaks dir --redact` 扫描工作树；未发现凭据、token、API key 或密码。
@@ -46,7 +55,7 @@
 - [x] `release.yml` 会拒绝与 `package.json` 版本不一致的 tag，本地版本守卫对 `1.0.0` 通过。
 - [x] 注解 tag `v1.0.0` 已存在，并解析到发布提交 `03fe02f`。
 - [x] 二进制由 CI 生成并被 gitignore，不会提交。
-- [x] GoReleaser 已配置生成 `checksums.txt` 和 keyless Sigstore bundle；项目不宣传 standalone installer 或 self-update，因此进程内 updater 校验为 **N/A**。
+- [x] 对已审查的 `v1.0.0` 产物，当时未宣传 self-update，因此进程内 updater 校验为 **N/A**。这条历史结果不覆盖 `1.0.2` updater 候选。
 - [x] [GitHub Release](https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0) 包含 5 个平台压缩包、`checksums.txt` 和 Sigstore bundle；下载后的每个压缩包均匹配 checksum，`cosign verify-blob` 对发布工作流身份返回 `Verified OK`。
 - [x] release workflow 已配置通过 `npm publish --provenance` 发布 wrapper 和全部平台包。
 - [x] npm 上 wrapper 与 6 个平台包均为 `latest=1.0.0`，全部绑定 `gitHead=03fe02f`，并具有 integrity、registry signature 与 SLSA provenance。
@@ -59,7 +68,7 @@
 - [x] `skills/cliproxyapi-cli/SKILL.md` frontmatter 与 CLI `1.0.0`、MIT、用户调用和 `min_version` 一致。
 - [x] Skill 包含触发边界、第一步、实时 reference 指引、写操作配方、STOP checkpoint、错误树、权限边界、`_untrusted` 和评估场景。
 - [x] `test-prompts.json` 合法，并覆盖上手、写安全、权限、`_untrusted` 与升级行为。
-- [x] **N/A —— 设计上不提供 self-update。** 升级由外部完成；Skill 要求单独同步整个 Skill，再运行 `changelog`、`reference`、`context` 和 `doctor`。
+- [x] **只对已审查的 `v1.0.0` 产物不适用。** 该版本使用外部升级和单独 Skill 同步；`1.0.2` 单命令 updater 受上方未勾选增量门禁约束。
 - [x] `reference`、`context`、`doctor` 均以真实命令运行并输出 canonical JSON envelope。
 - [x] `reference` 与 `doctor` 暴露相同的发布就绪状态。
 - [x] `SECURITY.md`、`.agent/SEC-SPEC.md` 和实时 `reference` 都声明风险等级 `T2`。

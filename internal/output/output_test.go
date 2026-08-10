@@ -24,8 +24,42 @@ func TestPrinterSuccessEnvelope(t *testing.T) {
 	if _, ok := got["meta"].(map[string]any)["duration_ms"]; !ok {
 		t.Fatalf("meta.duration_ms missing: %#v", got)
 	}
+	if _, ok := got["meta"].(map[string]any)["notices"]; ok {
+		t.Fatalf("meta.notices should be omitted when empty: %#v", got)
+	}
 	if bytes.Contains(out.Bytes(), []byte("\n  ")) {
 		t.Fatalf("compact output is indented: %q", out.String())
+	}
+}
+
+func TestPrinterSuccessEnvelopeIncludesMetaNotices(t *testing.T) {
+	var out bytes.Buffer
+	printer := NewPrinter(&out, Options{Format: FormatJSON, Compact: true, Notices: []any{map[string]any{"type": "update_available", "severity": "info"}}})
+	if err := printer.Success(map[string]any{"value": "ok"}); err != nil {
+		t.Fatalf("Success() error = %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, out.String())
+	}
+	notices, ok := got["meta"].(map[string]any)["notices"].([]any)
+	if !ok || len(notices) != 1 {
+		t.Fatalf("meta.notices = %#v", got["meta"])
+	}
+}
+
+func TestPrinterSuccessEnvelopeOmitsEmptyMetaNotices(t *testing.T) {
+	var out bytes.Buffer
+	printer := NewPrinter(&out, Options{Format: FormatJSON, Compact: true, Notices: []any{}})
+	if err := printer.Success(map[string]any{"value": "ok"}); err != nil {
+		t.Fatalf("Success() error = %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, out.String())
+	}
+	if _, ok := got["meta"].(map[string]any)["notices"]; ok {
+		t.Fatalf("empty meta.notices should be omitted: %#v", got["meta"])
 	}
 }
 

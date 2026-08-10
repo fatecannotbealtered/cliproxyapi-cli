@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-10
+
+### Added
+
+- Add the single-command `update` lifecycle with npm-managed and standalone-binary dispatch, whole-Skill synchronization, and structured update checks.
+- Add in-process Sigstore verification of signed release checksums before standalone archive checksum verification and atomic replacement.
+
+### Changed
+
+- Surface cached update notices through self-description and machine envelopes without adding network calls to ordinary commands.
+- Verify npm-managed updates against the installed CLI, refresh the whole Skill even when the binary is already current, and derive notice severity from the complete target CHANGELOG delta.
+- Build a native Windows ARM64 release artifact instead of publishing an amd64 binary under an ARM64 package label.
+- Report the `1.0.2` self-update candidate as `beta` until candidate-bound standalone and npm-managed update E2E evidence is recorded.
+
+### Fixed
+
+- Classify local signature-input read failures as local I/O or permission failures instead of reporting a forged-release integrity failure.
+- Report the normalized final `updated` status after successful standalone replacement, matching package-manager updates.
+
+### Security
+
+- Fail closed on missing or invalid Sigstore bundles, missing checksums, checksum mismatches, and unexpected standalone archives.
+- Preserve the old binary and recovery artifacts across pre-swap interruption, local I/O failure, and Windows rollback failure, while reporting the observed post-update state.
+
 ## [1.0.1] - 2026-08-09
 
 ### Added
@@ -57,6 +81,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Bind saved credentials to their normalized Management base URL, require dry-run/confirm for login/logout changes, and fail when the OS keyring is unavailable instead of falling back to argv or a plaintext secret file.
 - Require Go 1.26.5 or newer for builds so distributed binaries include current standard-library security fixes.
 
-[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/fatecannotbealtered/cliproxyapi-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0

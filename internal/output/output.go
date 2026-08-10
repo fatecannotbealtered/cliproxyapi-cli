@@ -24,6 +24,7 @@ type Options struct {
 	Compact   bool
 	Fields    []string
 	StartedAt time.Time
+	Notices   []any
 }
 
 // Printer writes exactly one command result to stdout.
@@ -41,6 +42,7 @@ func NewPrinter(out io.Writer, options Options) *Printer {
 
 type meta struct {
 	DurationMS int64 `json:"duration_ms"`
+	Notices    []any `json:"notices,omitempty"`
 }
 
 type successEnvelope struct {
@@ -114,7 +116,7 @@ func (p *Printer) commandMeta() meta {
 	if !p.options.StartedAt.IsZero() {
 		duration = time.Since(p.options.StartedAt).Milliseconds()
 	}
-	return meta{DurationMS: duration}
+	return meta{DurationMS: duration, Notices: p.options.Notices}
 }
 
 func (p *Printer) Success(data any) error {

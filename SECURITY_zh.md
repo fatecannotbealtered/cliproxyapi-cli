@@ -4,7 +4,7 @@
 
 ## 支持版本
 
-安全修复应用于最新的 `1.0.x` 版本。语义版本与基于证据的发布就绪度分别管理；当前声明以 `cliproxyapi-cli reference --compact` 为准。
+安全修复应用于最新已发布的 minor 版本；旧 minor 版本不提供回移。语义版本与基于证据的发布就绪度分别管理；当前声明以 `cliproxyapi-cli reference --compact` 为准。
 
 ## 报告漏洞
 
@@ -81,8 +81,14 @@ auth 元数据、provider 证据和上游错误文本都可能受攻击者控制
 
 仓库构建 Go 二进制和带平台包的 npm 启动壳。npm 安装路径只执行已经安装的平台二进制，不使用安装期网络下载器。CI 会运行 Go 测试、vet、Linux race、lint、npm audit、版本一致性和固定规范漂移检查。
 
-工具没有自更新命令。请通过包管理器升级，或从可信 release 替换二进制；随后重新安装/同步 Skill，并读取 `changelog` 与 `reference`。release workflow 的配置本身不能证明某个产物已经发布或得到独立验证。
+- npm 管理的安装由 updater 驱动 npm 更新，不会原地覆盖包管理器拥有的二进制。
+- standalone 更新会下载匹配的 GitHub Release 压缩包，在进程内把 `checksums.txt` 的 Sigstore bundle 绑定到本仓库 tag release workflow 身份进行验证，再校验压缩包 SHA-256，最后才原子替换二进制。该流程不依赖外部 `cosign`，也没有跳过验证的路径。
+- 签名缺失或无效、checksum 缺失或不匹配、压缩包内容异常都会 fail closed；临时下载目录会被清理，已安装二进制保持不变。
+- 裸 `update` 是一个幂等的单命令生命周期，不使用 confirm token。二进制或包到达目标版本后，会同步整个内置 Skill，使最终状态等价于 `npx skills add fatecannotbealtered/cliproxyapi-cli -y -g`。
+- 每个更新失败或中断都会报告阶段、当前版本、二进制替换状态和 Skill 同步状态。二进制已经替换但 Skill 同步失败时，会明确报告 partial success 和恢复命令。
+
+release workflow 配置本身不能证明某个产物已经发布或得到独立验证；应核对实际 release 资产和结构化 update 结果。
 
 ## 设计上不提供
 
-项目不提供 Web UI、daemon、OAuth/浏览器登录、明文凭据存储回退、一级删除流程或自更新机制。绕过上游授权、confirm token、凭据隔离或 provider 证据规则的请求属于安全问题，不是受支持流程。
+项目不提供 Web UI、daemon、OAuth/浏览器登录、明文凭据存储回退或一级删除流程。绕过上游授权、更新完整性验证、confirm token、凭据隔离或 provider 证据规则的请求属于安全问题，不是受支持流程。

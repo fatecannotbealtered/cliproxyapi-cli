@@ -6,6 +6,15 @@ Review record: **2026-08-08**, release `v1.0.0` at `03fe02f`, merged through [PR
 
 Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-builds, version/spec guards, npm audit/pack, actionlint, command-level contract tests, Gitleaks `v8.30.1` scans of both the Git history and working tree, and the [sanitized authorized production real-Codex E2E](e2e/2026-08-08-1.0.0-f3c5c4a-production.md). GitHub Actions evidence comes from the actual PR, `main`, and tag runs; release artifacts and npm publication were verified from their published outputs.
 
+This is a frozen evidence record for the `v1.0.0` first-public-release artifact. Checked statements below describe that artifact only; they do not qualify later Unreleased behavior.
+
+## `1.0.2` Self-Update Delta
+
+- [x] Bump the current published `1.0.1` release by the explicitly selected patch increment to `1.0.2`; do not republish it as `1.0.1`.
+- [x] Verify command-level FCC for update success, validation, network/timeout/interruption, integrity failure, package-manager dispatch, atomic replacement, notice caching, and partial Skill sync.
+- [ ] Record isolated standalone and npm-managed update E2E evidence against a clean candidate commit, including whole-Skill synchronization and post-update version checks.
+- [ ] Re-run the full release, native six-architecture, npm provenance, security, version/spec, and stable-readiness gates for that candidate.
+
 ## Secrets
 
 - [x] The working tree was scanned with `gitleaks dir --redact`; no credentials, tokens, API keys, or passwords were found.
@@ -46,7 +55,7 @@ Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-bu
 - [x] `release.yml` rejects a tag whose version differs from `package.json`, and the local version guard passes for `1.0.0`.
 - [x] The annotated `v1.0.0` tag exists and resolves to release commit `03fe02f`.
 - [x] Binaries are CI outputs and are gitignored rather than committed.
-- [x] GoReleaser is configured to produce `checksums.txt` and a keyless Sigstore bundle; no standalone installer or self-update path is advertised, so in-process updater verification is **N/A**.
+- [x] For the reviewed `v1.0.0` artifact, no self-update path was advertised, so in-process updater verification was **N/A**. This historical result does not cover the `1.0.2` updater candidate.
 - [x] The [GitHub Release](https://github.com/fatecannotbealtered/cliproxyapi-cli/releases/tag/v1.0.0) contains five platform archives, `checksums.txt`, and a Sigstore bundle; every downloaded archive matched its checksum and `cosign verify-blob` returned `Verified OK` for the release workflow identity.
 - [x] The release workflow is configured to publish the wrapper and all platform packages with `npm publish --provenance`.
 - [x] npm shows the wrapper and all six platform packages at `latest=1.0.0`, all bound to `gitHead=03fe02f`, with integrity, registry signatures, and SLSA provenance.
@@ -59,7 +68,7 @@ Local evidence includes Go tests/vet/lint, Linux race tests, six-target cross-bu
 - [x] `skills/cliproxyapi-cli/SKILL.md` frontmatter matches CLI version `1.0.0`, MIT, user invocation, and `min_version`.
 - [x] The Skill contains trigger boundaries, first step, live-reference guidance, write recipe, STOP checkpoints, error tree, permission boundary, `_untrusted`, and eval scenarios.
 - [x] `test-prompts.json` is valid and covers onboarding, write safety, permissions, `_untrusted`, and upgrade behavior.
-- [x] **N/A — no self-update by design.** Upgrade is external; the Skill requires a separate whole-Skill resync followed by `changelog`, `reference`, `context`, and `doctor`.
+- [x] **N/A for the reviewed `v1.0.0` artifact only.** That release used an external upgrade plus separate Skill resync; the `1.0.2` single-command updater is gated by the unchecked delta above.
 - [x] `reference`, `context`, and `doctor` run as real commands and emit canonical JSON envelopes.
 - [x] `reference` and `doctor` expose the same release-readiness state.
 - [x] `SECURITY.md`, `.agent/SEC-SPEC.md`, and live `reference` all declare risk tier `T2`.

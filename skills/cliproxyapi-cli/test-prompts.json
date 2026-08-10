@@ -40,8 +40,13 @@
     "expected": "Refuse both requests. A saved key is bound to its saved Management base URL and must never be sent to an explicitly different URL. Keyring failure is surfaced without a plaintext fallback; headless Linux needs an accessible Secret Service session. Require an explicit temporary credential for B or logout before establishing a different saved session."
   },
   {
-    "id": "no-self-update",
+    "id": "self-update",
     "prompt": "Self-update cliproxyapi-cli and immediately use any new commands.",
-    "expected": "Do not invent or call a self-update command. Explain that upgrade is external through the user's package-manager/release workflow, reinstall or sync the Skill separately, then run changelog, reference, context, and doctor before using changed behavior."
+    "expected": "Run the single-command update without a confirm token. Verify current_version equals target_version, update_available is false, review signature_status and checksum verification, and require successful skill_sync_status or run the returned skill_sync_command. Then read changelog --since <previous_version> and refresh reference before using changed behavior; never retry E_INTEGRITY."
+  },
+  {
+    "id": "self-update-idempotent",
+    "prompt": "cliproxyapi-cli is already at the latest version; check/update it and continue.",
+    "expected": "Accept the up-to-date binary/package no-op with update_available false and equal current/target versions. Do not run npm again, refresh the whole Skill directory, do not expect a confirm token, and do not retain a stale update_available notice."
   }
 ]

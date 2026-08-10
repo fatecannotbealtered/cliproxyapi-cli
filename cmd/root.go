@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	cliproxyapicli "github.com/fatecannotbealtered/cliproxyapi-cli"
@@ -47,11 +49,15 @@ type application struct {
 	stateDir        string
 	timeout         time.Duration
 	managementStdin bool
+
+	suppressUpdateNotices bool
 }
 
 // Execute is the process entry point.
 func Execute() {
-	exit := ExecuteArgs(context.Background(), os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	exit := ExecuteArgs(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
+	stop()
 	os.Exit(exit)
 }
 
@@ -79,6 +85,9 @@ func executeArgsWithCredentialStore(ctx context.Context, args []string, in io.Re
 		return 0
 	}
 	cliErr := asCLIError(err)
+	if command, _, findErr := root.Find(args); findErr == nil && command.Name() == "update" {
+		cliErr = ensureUpdateFailureDetails(cliErr)
+	}
 	printer := app.printer()
 	if printErr := printer.Failure(cliErr); printErr != nil {
 		_, _ = fmt.Fprintf(stderr, "failed to write error output: %v\n", printErr)
@@ -115,12 +124,14 @@ func (a *application) rootCommand() *cobra.Command {
 	root.AddCommand(a.contextCommand())
 	root.AddCommand(a.doctorCommand())
 	root.AddCommand(a.changelogCommand())
+	root.AddCommand(a.updateCommand())
 	root.AddCommand(a.loginCommand())
 	root.AddCommand(a.logoutCommand())
 	root.AddCommand(a.authFileCommand())
 	root.AddCommand(a.quotaCommand())
 	root.AddCommand(a.guardCommand())
 	root.AddCommand(a.rawCommand())
+	installUpdateNoticeHelp(root, a)
 	return root
 }
 
@@ -163,6 +174,7 @@ func (a *application) printer() *output.Printer {
 		Compact:   a.compact,
 		Fields:    a.fields,
 		StartedAt: a.startedAt,
+		Notices:   a.cachedNotices(),
 	})
 }
 

@@ -41,6 +41,9 @@ type canonicalContract struct {
 		Changelog struct {
 			RequiredDataKeys []string `json:"required_data_keys"`
 		} `json:"changelog"`
+		Update struct {
+			RequiredKeysOnAvailable []string `json:"required_keys_on_available"`
+		} `json:"update"`
 	} `json:"self_description"`
 }
 
@@ -51,7 +54,12 @@ func TestCommandsConformToCanonicalContract(t *testing.T) {
 	t.Setenv("CLIPROXYAPI_CLI_MANAGEMENT_KEY", "")
 
 	contextData := runConformantSuccess(t, contract, "context", "--compact")
-	assertRequiredKeys(t, contextData, contract.SelfDescription.Context.RequiredTopKeys)
+	for _, key := range contract.SelfDescription.Context.RequiredTopKeys {
+		if key == "notices" {
+			continue // Optional in practice: the canonical note requires omission when empty.
+		}
+		assertRequiredKeys(t, contextData, []string{key})
+	}
 
 	doctorData := runConformantSuccess(t, contract, "doctor", "--compact")
 	checks, ok := doctorData["checks"].([]any)
@@ -64,6 +72,12 @@ func TestCommandsConformToCanonicalContract(t *testing.T) {
 
 	changelogData := runConformantSuccess(t, contract, "changelog", "--compact")
 	assertRequiredKeys(t, changelogData, contract.SelfDescription.Changelog.RequiredDataKeys)
+
+	updateServer := updateMockReleaseServer(t, version, true)
+	defer updateServer.Close()
+	withUpdateServer(t, updateServer)
+	updateData := runConformantSuccess(t, contract, "update", "--check", "--compact")
+	assertRequiredKeys(t, updateData, contract.SelfDescription.Update.RequiredKeysOnAvailable)
 
 	referenceData := runConformantSuccess(t, contract, "reference", "--compact")
 	assertRequiredKeys(t, referenceData, contract.SelfDescription.Reference.RequiredTopKeys)

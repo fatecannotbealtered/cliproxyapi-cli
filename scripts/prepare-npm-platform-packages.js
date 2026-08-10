@@ -27,12 +27,8 @@ function walk(dir) {
 
 function findArchive(npmOS, npmCPU) {
   const releaseOS = osMap[npmOS];
-  let releaseArch = archMap[npmCPU];
-  let archive = findArchiveExact(releaseOS, releaseArch);
-  if (!archive && npmOS === "win32" && npmCPU === "arm64") {
-    releaseArch = "amd64";
-    archive = findArchiveExact(releaseOS, releaseArch);
-  }
+  const releaseArch = archMap[npmCPU];
+  const archive = findArchiveExact(releaseOS, releaseArch);
   if (!archive) {
     throw new Error(`No release archive found for npm platform ${npmOS}-${npmCPU}`);
   }

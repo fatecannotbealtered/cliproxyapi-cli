@@ -4,7 +4,7 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest `1.0.x` release. Semantic version and evidence-based release readiness are tracked separately; check `cliproxyapi-cli reference --compact` for the current declaration.
+Security fixes are applied to the latest published minor release; older minors do not receive backports. Semantic version and evidence-based release readiness are tracked separately; check `cliproxyapi-cli reference --compact` for the current declaration.
 
 ## Report a Vulnerability
 
@@ -81,8 +81,14 @@ The binary is not a daemon and does not install schedules. cron, systemd timers,
 
 The repository builds a Go binary and an npm launcher with platform packages. The npm install path executes the already-installed platform binary and does not use an install-time network downloader. CI runs Go tests, vet, race tests on Linux, lint, npm audit, version consistency, and the pinned-spec drift guard.
 
-There is no self-update command. Upgrade through the package manager or replace the binary from a trusted release, then reinstall/sync the Skill and read `changelog` plus `reference`. Release workflow configuration is not evidence that a particular artifact was published or independently verified.
+- npm-managed installations are updated by driving npm; the updater does not overwrite a package-manager-owned binary in place.
+- Standalone updates download the matching GitHub Release archive, verify the Sigstore bundle for `checksums.txt` in process against this repository's tagged release workflow identity, verify the archive SHA-256, and only then perform an atomic replacement. There is no external `cosign` dependency or verification skip path.
+- Missing or invalid signatures, missing checksum data, checksum mismatches, and unexpected archives fail closed. The temporary download directory is removed without changing the installed binary.
+- A bare `update` is one idempotent lifecycle and does not use a confirmation token. After the binary or package reaches the target version, it synchronizes the whole bundled Skill with the same end state as `npx skills add fatecannotbealtered/cliproxyapi-cli -y -g`.
+- Every update failure or interruption reports its stage, current version, replacement state, and Skill-sync state. A post-replacement Skill-sync failure is reported as partial success with an explicit recovery command.
+
+Release workflow configuration alone is not proof that a particular artifact was published or independently verified. Check the release assets and the structured update result.
 
 ## Out of Scope by Design
 
-The project does not provide a Web UI, daemon, OAuth/browser login, plaintext credential-store fallback, first-class deletion workflow, or self-update mechanism. Requests to bypass upstream authorization, confirmation tokens, credential isolation, or provider-evidence rules are security issues, not supported workflows.
+The project does not provide a Web UI, daemon, OAuth/browser login, plaintext credential-store fallback, or first-class deletion workflow. Requests to bypass upstream authorization, update integrity verification, confirmation tokens, credential isolation, or provider-evidence rules are security issues, not supported workflows.

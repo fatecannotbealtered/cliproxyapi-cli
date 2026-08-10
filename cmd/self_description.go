@@ -28,18 +28,18 @@ type releaseReadiness struct {
 
 func currentReleaseReadiness() releaseReadiness {
 	return releaseReadiness{
-		Level:                      "stable",
+		Level:                      "beta",
 		FCCRequired:                true,
 		FCCStatus:                  "verified",
 		MockUpstreamRequired:       true,
 		MockUpstreamStatus:         "verified",
 		LiveSmokeRequiredForStable: true,
-		LiveSmokeStatus:            "verified",
-		Reason:                     "Command-level coverage, mock-upstream contracts, the full 1.0.0 production E2E, and the targeted 1.0.1 quota regression smoke are verified.",
+		LiveSmokeStatus:            "missing",
+		Reason:                     fmt.Sprintf("The published 1.0.1 provider evidence remains valid, and standalone and npm-managed self-update E2E passed for the development tree; it must be rerun against a clean candidate commit before %s can be stable.", version),
 		RequiredEvidence: []string{
 			"functional_contract_coverage_100",
 			"mock_upstream_contract_tests",
-			"recorded_live_smoke_for_stable",
+			"recorded_candidate_update_e2e_for_stable",
 		},
 	}
 }
@@ -54,7 +54,7 @@ func (a *application) contextCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return a.success(map[string]any{
+			data := map[string]any{
 				"tool":    "cliproxyapi-cli",
 				"version": version,
 				"runtime": map[string]any{"go_version": runtime.Version(), "os": runtime.GOOS, "arch": runtime.GOARCH},
@@ -64,8 +64,11 @@ func (a *application) contextCommand() *cobra.Command {
 					"configured": cfg.ManagementKey != "",
 					"source":     cfg.CredentialSource,
 				},
-				"notices": []any{},
-			})
+			}
+			if notices := a.cachedNotices(); len(notices) > 0 {
+				data["notices"] = notices
+			}
+			return a.success(data)
 		},
 	}
 }
@@ -93,7 +96,7 @@ func (a *application) doctorCommand() *cobra.Command {
 				readinessCheck = doctorCheck{
 					Check:  "release_readiness",
 					Status: "warn",
-					Fix:    "record a qualifying real-Codex E2E run before declaring stable",
+					Fix:    "record candidate-bound standalone and npm-managed update E2E evidence before declaring stable",
 				}
 			}
 			checks := []doctorCheck{
@@ -132,11 +135,15 @@ func (a *application) doctorCommand() *cobra.Command {
 					}
 				}
 			}
-			return a.success(map[string]any{
+			data := map[string]any{
 				"checks":            checks,
 				"base_url":          cfg.BaseURL,
 				"release_readiness": readiness,
-			})
+			}
+			if notices := a.cachedNotices(); len(notices) > 0 {
+				data["notices"] = notices
+			}
+			return a.success(data)
 		},
 	}
 }
@@ -185,6 +192,7 @@ func commandMetadataCatalog() map[string]commandMetadata {
 		"cliproxyapi-cli context":              {Schema: "context", Examples: []string{"cliproxyapi-cli context --compact"}, BlastRadius: "reads local environment metadata without exposing credentials", WriteGate: "none", StateVerification: "response_only", RetrySemantics: "safe_retry"},
 		"cliproxyapi-cli doctor":               {Schema: "doctor", Examples: []string{"cliproxyapi-cli doctor --compact"}, BlastRadius: "checks local configuration and Management API connectivity", WriteGate: "none", StateVerification: "response_only", RetrySemantics: "safe_retry"},
 		"cliproxyapi-cli changelog":            {Schema: "changelog", Examples: []string{"cliproxyapi-cli changelog --since 1.0.0 --compact"}, BlastRadius: "reads the embedded changelog", WriteGate: "none", StateVerification: "response_only", RetrySemantics: "safe_retry"},
+		"cliproxyapi-cli update":               {Schema: "update", Examples: []string{"cliproxyapi-cli update --check --compact", "cliproxyapi-cli update --dry-run --compact", "cliproxyapi-cli update --compact"}, Write: true, BlastRadius: "refreshes the installed binary or package and synchronizes the bundled Skill", WriteGate: "self_update", StateVerification: "post_update_verification", RetrySemantics: "idempotent"},
 		"cliproxyapi-cli login":                {Schema: "login_session", Examples: []string{"cliproxyapi-cli login --base-url https://example.com/v0/management --management-key-stdin --dry-run --compact", "cliproxyapi-cli login --base-url https://example.com/v0/management --management-key-stdin --confirm <confirm_token> --compact"}, Write: true, BlastRadius: "verifies a Management key and saves it in the current user's OS credential store", WriteGate: "dry_run_confirm", StateVerification: "preflight_and_local_commit", RetrySemantics: "new_dry_run_required"},
 		"cliproxyapi-cli logout":               {Schema: "logout_session", Examples: []string{"cliproxyapi-cli logout --dry-run --compact", "cliproxyapi-cli logout --confirm <confirm_token> --compact"}, Write: true, BlastRadius: "removes the saved Management key and local login profile", WriteGate: "dry_run_confirm", StateVerification: "local_delete", RetrySemantics: "new_dry_run_required"},
 		"cliproxyapi-cli auth-file list":       {Schema: "auth_file_list", Examples: []string{"cliproxyapi-cli auth-file list --provider codex --compact"}, BlastRadius: "reads auth metadata visible to the Management key", WriteGate: "none", StateVerification: "response_only", RetrySemantics: "safe_retry"},
@@ -199,8 +207,9 @@ func referenceSchemas() map[string]dataSchema {
 	return map[string]dataSchema{
 		"reference":        {Shape: "object", Fields: []string{"tool", "version", "risk_tier", "release_readiness", "commands", "schemas", "exit_codes", "error_codes"}, UntrustedFields: []string{}},
 		"context":          {Shape: "object", Fields: []string{"tool", "version", "runtime", "target", "state", "credentials", "notices"}, UntrustedFields: []string{}},
-		"doctor":           {Shape: "object", Fields: []string{"checks", "base_url", "release_readiness"}, UntrustedFields: []string{}},
+		"doctor":           {Shape: "object", Fields: []string{"checks", "base_url", "release_readiness", "notices"}, UntrustedFields: []string{}},
 		"changelog":        {Shape: "object", Fields: []string{"current_version", "since", "entries", "count"}, UntrustedFields: []string{}},
+		"update":           {Shape: "object", Fields: []string{"status", "asset", "path", "current_version", "previous_version", "target_version", "update_available", "release_url", "install_method", "command", "signature_available", "checksum_available", "skill_sync_supported", "binary_replaced", "signature_verified", "checksum_verified", "signature_status", "skill_sync_command", "skill_sync_status", "hint", "preview", "verification", "notices"}, UntrustedFields: []string{}},
 		"login_session":    {Shape: "object", Fields: []string{"configured", "verified", "base_url", "credential_backend", "preview", "confirm_token", "expires_at"}, UntrustedFields: []string{}},
 		"logout_session":   {Shape: "object", Fields: []string{"removed", "base_url", "credential_backend", "preview", "confirm_token", "expires_at"}, UntrustedFields: []string{}},
 		"auth_file_list":   {Shape: "object", Fields: []string{"items", "count", "offset", "next_offset", "has_more", "_untrusted"}, UntrustedFields: authFileListUntrustedFields()},
@@ -237,9 +246,10 @@ func buildReference(root *cobra.Command) map[string]any {
 		if !command.Runnable() {
 			return
 		}
-		metadata := catalog[command.CommandPath()]
+		path := command.CommandPath()
+		metadata := catalog[path]
 		commands = append(commands, commandReference{
-			Path:              command.CommandPath(),
+			Path:              path,
 			Type:              map[bool]string{true: "write", false: "read"}[metadata.Write],
 			Description:       command.Short,
 			PermissionTier:    commandPermissionTier(metadata),
@@ -281,7 +291,7 @@ func collectCommandParams(command *cobra.Command) []commandParam {
 	params := make([]commandParam, 0)
 	seen := map[string]bool{}
 	collect := func(flag *pflag.Flag) {
-		if flag.Name == "help" {
+		if flag.Name == "help" || flag.Hidden {
 			return
 		}
 		if seen[flag.Name] {

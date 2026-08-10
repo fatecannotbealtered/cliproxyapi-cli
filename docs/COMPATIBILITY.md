@@ -12,6 +12,7 @@ The repository vendors `ai-native-cli-spec` **v1.5.0**. `contract/contract.json`
 |-------|--------|
 | CLI implementation | Go 1.26.5 or newer with Cobra |
 | Distribution | Native binary plus npm launcher/platform packages |
+| Self-update | npm-managed installs driven through npm; standalone GitHub Release archives verified in process and atomically replaced |
 | Management base | HTTP(S), default `http://127.0.0.1:8317/v0/management` |
 | Credentials | One saved OS-keyring session, with one-line stdin or `CLIPROXYAPI_CLI_MANAGEMENT_KEY` as explicit overrides |
 | Local profile | `~/.cliproxyapi-cli/config.json`; non-secret `version`, `base_url`, and `credential_backend` only |
@@ -37,7 +38,7 @@ The modeled implementation uses this small Management API surface:
 
 Status writes are verified by the CLI by reading the selected record again after the PATCH. The documented Management API does not expose a conditional-update/CAS field, so this is not a server-side linearizability guarantee against an independent concurrent writer; callers that require that stronger property must serialize writers at the orchestration layer.
 
-Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea37d13`, the authorized production run against `v7.2.114` at commit `41fc5e1`, and the targeted `1.0.1` quota regression smoke against the same authorized deployment. The full production run is bound to CLI candidate `f3c5c4a`; the targeted smoke is bound to `71bc3de`; both are recorded in [E2E.md](E2E.md). The observed releases accept `auth_index` as an additional `/auth-files/status` selector and expose parsed `id_token` claims in `/auth-files`; the public Management API page does not promise those details as a versioned contract. The CLI therefore still treats missing claims as unknown and performs no quota write. This evidence supports `stable`; it is not a compatibility promise for untested upstream releases.
+Live Management coverage now includes local CLIProxyAPI `v7.2.120` at commit `ea37d13`, the authorized production run against `v7.2.114` at commit `41fc5e1`, and the targeted `1.0.1` quota regression smoke against the same authorized deployment. The full production run is bound to CLI candidate `f3c5c4a`; the targeted smoke is bound to `71bc3de`; both are recorded in [E2E.md](E2E.md). The observed releases accept `auth_index` as an additional `/auth-files/status` selector and expose parsed `id_token` claims in `/auth-files`; the public Management API page does not promise those details as a versioned contract. The CLI therefore still treats missing claims as unknown and performs no quota write. This evidence supports the published `1.0.1` stable state; it does not qualify the `1.0.2` updater candidate or promise compatibility with untested upstream releases.
 
 ## Codex Quota Response
 
@@ -51,16 +52,22 @@ Compatibility intentionally fails closed. Only explicit structured signals can r
 
 The provider probe is fixed to the Codex client's current ChatGPT usage endpoint. That endpoint and its client-identifying request headers are implementation dependencies observed in the Management Web UI, not stable public Platform API contracts. Arbitrary upstream URLs are not accepted by the quota or guard commands, and unknown response variants fail closed.
 
+## Update and Distribution Compatibility
+
+The CLI recognizes an npm-managed install only when its executable is inside the expected `node_modules` platform-package layout with a matching package manifest. A bare `update` then drives `npm install -g @fateforge/cliproxyapi-cli@<target> --include=optional` and synchronizes the whole Agent Skill; it does not overwrite npm-owned files directly. A standalone binary instead downloads the matching GitHub Release archive, verifies the signed checksum in process, verifies the archive checksum, atomically replaces the executable, and then synchronizes the Skill.
+
+Release and npm platform labels must match the binary architecture exactly. The supported release matrix is Linux, macOS, and Windows on amd64 and arm64; Windows arm64 uses a native arm64 build and must never reuse the amd64 archive. `update --check` is read-only, while ordinary commands only read the local update-notice cache and do not contact GitHub.
+
 ## Explicit Non-Goals
 
-Version `1.0.1` does not provide:
+The project intentionally does not provide:
 
 - OAuth or browser-based login;
 - a plaintext credential-store fallback;
 - a daemon or built-in scheduler;
 - a Web UI;
 - a first-class auth-file delete command;
-- a self-update command; or
+- a separate Skill-installer command; or
 - quota decisions based on `usage-queue`, local usage counters, or `reset-quota`.
 
 `usage-queue` pops local telemetry records when read. `reset-quota` clears a CLIProxyAPI cooldown, not an upstream quota. Neither behavior is treated as provider allowance state.
