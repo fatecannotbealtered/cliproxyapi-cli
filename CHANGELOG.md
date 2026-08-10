@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Promote machine-readable release readiness from `beta`/`missing` to `stable`/`verified` after recording the candidate-bound disposable-instance and self-update E2E for `1b2393c`.
+
 - Render `--format text` success output as flat `path: value` lines instead of the unwrapped JSON payload, so human output can no longer be mistaken for the machine envelope.
 
 ### Fixed

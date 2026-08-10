@@ -28,14 +28,14 @@ type releaseReadiness struct {
 
 func currentReleaseReadiness() releaseReadiness {
 	return releaseReadiness{
-		Level:                      "beta",
+		Level:                      "stable",
 		FCCRequired:                true,
 		FCCStatus:                  "verified",
 		MockUpstreamRequired:       true,
 		MockUpstreamStatus:         "verified",
 		LiveSmokeRequiredForStable: true,
-		LiveSmokeStatus:            "missing",
-		Reason:                     fmt.Sprintf("The published 1.0.1 provider evidence remains valid, and both a full disposable-instance E2E and the standalone/npm self-update E2E passed for the development tree; both must be rerun against a clean candidate commit before %s can be stable.", version),
+		LiveSmokeStatus:            "verified",
+		Reason:                     fmt.Sprintf("Candidate 1b2393c recorded a disposable-instance E2E over the whole command surface plus standalone, npm-managed, and already-current self-update runs against the signed 1.0.1 release. Provider quota semantics are unchanged in %s, so the authorized 1.0.0 production E2E and 1.0.1 quota smoke remain the evidence for that surface.", version),
 		RequiredEvidence: []string{
 			"functional_contract_coverage_100",
 			"mock_upstream_contract_tests",

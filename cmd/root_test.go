@@ -301,8 +301,15 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		check := raw.(map[string]any)
 		if check["check"] == "release_readiness" {
 			found = true
-			if check["status"] != "warn" || !strings.Contains(check["fix"].(string), "update E2E") {
-				t.Fatalf("release_readiness check = %#v, want candidate beta warning", check)
+			// Assert the invariant, not the current level: a `stable` declaration
+			// passes with no fix, anything less warns with an actionable one. A
+			// promotion or demotion must not require editing this test.
+			if currentReleaseReadiness().Level == "stable" {
+				if check["status"] != "pass" || check["fix"] != nil {
+					t.Fatalf("release_readiness check = %#v, want a clean pass for a stable declaration", check)
+				}
+			} else if check["status"] != "warn" || strings.TrimSpace(check["fix"].(string)) == "" {
+				t.Fatalf("release_readiness check = %#v, want a warning with an actionable fix", check)
 			}
 		}
 	}
@@ -314,14 +321,19 @@ func TestDoctorCommandIncludesReleaseReadiness(t *testing.T) {
 		t.Fatalf("doctor meta should omit empty notices: %#v", meta)
 	}
 	readiness := decodeEnvelope(t, stdout)["data"].(map[string]any)["release_readiness"].(map[string]any)
-	if readiness["level"] != "beta" || readiness["fcc_status"] != "verified" || readiness["mock_upstream_status"] != "verified" || readiness["live_smoke_status"] != "missing" {
-		t.Fatalf("release_readiness = %#v", readiness)
+	declared := currentReleaseReadiness()
+	if readiness["level"] != declared.Level {
+		t.Fatalf("release_readiness = %#v, want the declared level %q", readiness, declared.Level)
 	}
-	if !strings.Contains(readiness["reason"].(string), "clean candidate commit") {
-		t.Fatalf("release_readiness reason = %q, want clean-candidate rerun requirement", readiness["reason"])
-	}
-	if !strings.Contains(readiness["reason"].(string), "self-update E2E passed for the development tree") {
-		t.Fatalf("release_readiness reason = %q, want completed development-E2E status", readiness["reason"])
+	// `stable` is a claim about recorded evidence: it may only be declared when
+	// every required evidence class is satisfied, so a promotion cannot outrun
+	// the evidence.
+	if declared.Level == "stable" {
+		for _, field := range []string{"fcc_status", "mock_upstream_status", "live_smoke_status"} {
+			if readiness[field] != "verified" {
+				t.Fatalf("stable declared with %s = %v", field, readiness[field])
+			}
+		}
 	}
 	if !strings.Contains(readiness["reason"].(string), version) {
 		t.Fatalf("release_readiness reason = %q, want current version %q", readiness["reason"], version)
