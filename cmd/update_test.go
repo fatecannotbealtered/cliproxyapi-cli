@@ -767,7 +767,15 @@ func TestApplyUpdateBinarySwapsInPlace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("applyUpdateBinary: %v", err)
 	}
-	if res.Status != "installed" || res.Path != dst {
+	resultInfo, err := os.Stat(res.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetInfo, err := os.Stat(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Status != "installed" || !os.SameFile(resultInfo, targetInfo) {
 		t.Fatalf("result = %#v", res)
 	}
 	got, err := os.ReadFile(dst)
