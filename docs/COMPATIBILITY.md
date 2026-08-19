@@ -10,7 +10,7 @@ The repository vendors `ai-native-cli-spec` **v1.5.0**. `contract/contract.json`
 
 | Layer | Target |
 |-------|--------|
-| CLI implementation | Go 1.26.5 or newer with Cobra |
+| CLI implementation | Go 1.26.6 or newer with Cobra |
 | Distribution | Native binary plus npm launcher/platform packages |
 | Self-update | npm-managed installs driven through npm; standalone GitHub Release archives verified in process and atomically replaced |
 | Management base | HTTP(S), default `http://127.0.0.1:8317/v0/management` |

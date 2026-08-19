@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- Raise the Go toolchain to 1.26.6 to clear four reachable Go standard-library
+  vulnerabilities reported by `govulncheck`: GO-2026-6218 (`net/url`),
+  GO-2026-6090 (`crypto/tls`), GO-2026-5972 (`encoding/asn1`), and
+  GO-2026-5026 (`net/http`).
+
 ## [1.0.3] - 2026-08-10
 
 ### Changed
