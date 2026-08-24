@@ -12,6 +12,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   vulnerabilities reported by `govulncheck`: GO-2026-6218 (`net/url`),
   GO-2026-6090 (`crypto/tls`), GO-2026-5972 (`encoding/asn1`), and
   GO-2026-5026 (`net/http`).
+- CI now runs `govulncheck ./...` in the Lint job, fail-closed. SEC-SPEC §5 was
+  tightened to require a dependency audit for every ecosystem a tool ships in;
+  this one ships as a Go binary and an npm wrapper, and only the wrapper was
+  ever audited, so the Go module's own dependencies went unscanned.
+
+### Changed
+
+- Sync the vendored spec to `ai-native-cli-spec@v1.6.0`. Besides the audit rule
+  above, CLI-SPEC §14 now states the `update` final-state contract explicitly:
+  the idempotent no-op check runs before any package-manager command, and both
+  successful and no-op results report `current_version == target_version` with
+  `update_available: false`.
 
 ## [1.0.3] - 2026-08-10
 
