@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-26
+
 ### Security
 
 - Raise the Go toolchain to 1.26.6 to clear four reachable Go standard-library

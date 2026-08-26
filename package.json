@@ -1,6 +1,6 @@
 {
   "name": "@fateforge/cliproxyapi-cli",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "inspecting CLIProxyAPI auth accounts, Codex quota, and guard decisions",
   "license": "MIT",
   "author": "Sean Guo",
@@ -19,12 +19,12 @@
     "check-version": "node scripts/check-version.js"
   },
   "optionalDependencies": {
-    "@fateforge/cliproxyapi-cli-darwin-arm64": "1.0.3",
-    "@fateforge/cliproxyapi-cli-darwin-x64": "1.0.3",
-    "@fateforge/cliproxyapi-cli-linux-arm64": "1.0.3",
-    "@fateforge/cliproxyapi-cli-linux-x64": "1.0.3",
-    "@fateforge/cliproxyapi-cli-win32-arm64": "1.0.3",
-    "@fateforge/cliproxyapi-cli-win32-x64": "1.0.3"
+    "@fateforge/cliproxyapi-cli-darwin-arm64": "1.0.4",
+    "@fateforge/cliproxyapi-cli-darwin-x64": "1.0.4",
+    "@fateforge/cliproxyapi-cli-linux-arm64": "1.0.4",
+    "@fateforge/cliproxyapi-cli-linux-x64": "1.0.4",
+    "@fateforge/cliproxyapi-cli-win32-arm64": "1.0.4",
+    "@fateforge/cliproxyapi-cli-win32-x64": "1.0.4"
   },
   "files": [
     "scripts/run.js",
